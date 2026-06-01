@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill Manager</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--text2:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--hover:#1f2937}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.unsupported{display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:40px}
+.unsupported h2{color:var(--yellow)}
+
+.header{padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.header h1{font-size:16px;font-weight:600;white-space:nowrap}
+.header .stats{color:var(--text2);font-size:13px;flex:1}
+.btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+.btn.primary{border-color:var(--accent);background:rgba(88,166,255,.12);color:var(--accent)}
+.btn.danger{border-color:var(--red);color:var(--red);background:rgba(248,81,73,.08)}
+.btn.danger:hover{background:rgba(248,81,73,.18)}
+.btn.green{border-color:var(--green);color:var(--green);background:rgba(63,185,80,.1)}
+.btn.green:hover{background:rgba(63,185,80,.2)}
+
+.toolbar{padding:10px 24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border)}
+.toolbar input[type=text]{flex:1;min-width:160px;padding:6px 10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none}
+.toolbar input[type=text]:focus{border-color:var(--accent)}
+.toolbar select{padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;outline:none}
+.toolbar .sep{width:1px;height:18px;background:var(--border)}
+#sel-count{font-size:12px;color:var(--text2)}
+.content{padding:16px 24px}
+
+/* Skill groups */
+.sg{margin-bottom:14px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.sg-h{display:flex;align-items:center;padding:8px 14px;background:var(--card);cursor:pointer;user-select:none;gap:8px;border-bottom:1px solid var(--border)}
+.sg-h:hover{background:var(--hover)}
+.sg-h .arrow{font-size:9px;color:var(--text2);transition:transform .15s}
+.sg-h .arrow.open{transform:rotate(90deg)}
+.sg-h .gl{font-size:13px;font-weight:600;color:var(--accent)}
+.sg-h .gc{font-size:11px;color:var(--text2)}
+.sg-b{display:none}.sg-b.open{display:block}
+.sr{display:flex;align-items:center;padding:7px 14px;border-bottom:1px solid var(--border);transition:all .1s;gap:10px}
+.sr:last-child{border-bottom:none}
+.sr:hover{background:var(--hover)}
+.sr.sel{background:rgba(88,166,255,.08)}
+.sr input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0}
+.sn{font-weight:600;font-size:13px;min-width:140px}
+.sd{font-size:12px;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sm{font-size:11px;color:var(--text2);white-space:nowrap}
+.dup{font-size:9px;padding:1px 5px;background:rgba(210,153,34,.15);color:var(--yellow);border-radius:3px;margin-left:6px;vertical-align:middle}
+
+/* Modal base */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.mo.active{display:flex}
+.md{background:var(--card);border:1px solid var(--border);border-radius:12px;width:90vw;max-width:560px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column}
+.md-h{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.md-h h3{font-size:14px}
+.md-x{background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer}
+.md-b{flex:1;overflow:auto;padding:14px 20px}
+.md-f{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+
+/* Connect modal */
+.agent-grid{display:flex;flex-direction:column;gap:6px}
+.agent-row{display:flex;align-items:center;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;gap:10px}
+.agent-row input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;cursor:pointer;flex-shrink:0}
+.agent-row .aname{font-size:13px;font-weight:600;min-width:100px}
+.agent-row .apath{font-size:11px;color:var(--text2);font-family:'SF Mono',Menlo,monospace;flex:1}
+.agent-row .astatus{font-size:11px;padding:2px 8px;border-radius:3px;white-space:nowrap}
+.agent-row .astatus.on{background:rgba(63,185,80,.15);color:var(--green)}
+.agent-row .astatus.off{color:var(--text2)}
+.custom-row{display:flex;gap:8px;margin-bottom:12px}
+.custom-row input{flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;outline:none}
+.custom-row input:focus{border-color:var(--accent)}
+
+/* Diff / View modal (wider) */
+.md-wide{max-width:900px}
+.ds{display:flex;gap:14px;margin-bottom:10px;font-size:12px}
+.ds .a{color:var(--green)}.ds .r{color:var(--red)}
+.dc,.cv{font-family:'SF Mono',Consolas,monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-all}
+.dc .la{color:var(--green);background:rgba(63,185,80,.1)}
+.dc .ld{color:var(--red);background:rgba(248,81,73,.1)}
+
+.empty{text-align:center;padding:48px 20px;color:var(--text2);font-size:14px}
+.toast{position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:8px;font-size:13px;z-index:200;animation:fi .2s}
+.toast.ok{background:rgba(63,185,80,.2);border:1px solid var(--green);color:var(--green)}
+.toast.err{background:rgba(248,81,73,.2);border:1px solid var(--red);color:var(--red)}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div id="unsupported" class="unsupported" style="display:none">
+  <div><h2>Browser Not Supported</h2><p style="color:var(--text2)">Requires Chrome / Edge / Opera.</p></div>
+</div>
+
+<div id="app" style="display:none">
+<div class="header">
+  <h1>Skill Manager</h1>
+  <button class="btn green" id="btn-connect">+ Connect</button>
+  <button class="btn primary" id="btn-rescan">Rescan</button>
+  <span class="stats" id="stats"></span>
+</div>
+<div class="toolbar">
+  <input type="text" id="search" placeholder="Search...">
+  <select id="filter"><option value="">All Sources</option></select>
+  <div class="sep"></div>
+  <button class="btn" id="btn-cmp" disabled>Compare</button>
+  <button class="btn" id="btn-view" disabled>View</button>
+  <button class="btn danger" id="btn-del" disabled>Delete</button>
+  <button class="btn" id="btn-rst" disabled>Reset</button>
+  <span id="sel-count"></span>
+</div>
+<div class="content"><div id="list"></div></div>
+</div>
+
+<!-- Connect Modal -->
+<div class="mo" id="m-conn">
+  <div class="md">
+    <div class="md-h"><h3>Connect Skill Directories</h3><button class="md-x" onclick="cm('m-conn')">&times;</button></div>
+    <div class="md-b">
+      <div class="custom-row">
+        <input type="text" id="custom-label" placeholder="Label (e.g. My Agent)">
+        <button class="btn green" id="btn-custom-pick">Select Folder</button>
+      </div>
+      <div class="agent-grid" id="agent-grid"></div>
+    </div>
+    <div class="md-f">
+      <button class="btn" onclick="cm('m-conn')">Cancel</button>
+      <button class="btn green" id="btn-scan-selected">Scan Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diff Modal -->
+<div class="mo" id="m-diff">
+  <div class="md md-wide"><div class="md-h"><h3 id="d-title"></h3><button class="md-x" onclick="cm('m-diff')">&times;</button></div>
+  <div class="md-b"><div class="ds" id="d-stats"></div><div class="dc" id="d-body"></div></div></div>
+</div>
+
+<!-- View Modal -->
+<div class="mo" id="m-view">
+  <div class="md md-wide"><div class="md-h"><h3 id="v-title"></h3><button class="md-x" onclick="cm('m-view')">&times;</button></div>
+  <div class="md-b"><div class="cv" id="v-body"></div></div></div>
+</div>
+
+<script>
+if (!('showDirectoryPicker' in window)) {
+  document.getElementById('unsupported').style.display = 'flex';
+  throw 0;
+}
+document.getElementById('app').style.display = '';
+
+// ── Agent definitions ─────────────────────────────────────────────
+const AGENTS = [
+  {id:'claude',   label:'Claude Code',    hint:'~/.claude/skills'},
+  {id:'cline',    label:'Cline',          hint:'~/.agents/skills'},
+  {id:'hermes',   label:'Hermes Agent',   hint:'~/.hermes/skills'},
+  {id:'copilot',  label:'GitHub Copilot', hint:'~/.copilot/skills'},
+  {id:'cursor',   label:'Cursor',         hint:'~/.cursor/skills'},
+  {id:'opencode', label:'OpenCode',       hint:'~/.config/opencode/skills'},
+  {id:'codex',    label:'Codex',          hint:'~/.codex/skills'},
+  {id:'gemini',   label:'Gemini CLI',     hint:'~/.gemini/skills'},
+  {id:'windsurf', label:'Windsurf',       hint:'~/.codeium/windsurf/skills'},
+  {id:'openclaw', label:'OpenClaw',       hint:'~/.openclaw/skills'},
+  {id:'trae',     label:'Trae',           hint:'~/.trae/skills'},
+  {id:'codebuddy',label:'CodeBuddy',      hint:'~/.codebuddy/skills'},
+  {id:'droid',    label:'Droid',          hint:'~/.factory/skills'},
+  {id:'amp',      label:'Amp',            hint:'~/.config/agents/skills'},
+  {id:'kilocode', label:'Kilo Code',      hint:'~/.kilocode/skills'},
+  {id:'mux',      label:'Mux',            hint:'~/.mux/skills'},
+  {id:'qoder',    label:'Qoder',          hint:'~/.qoder/skills'},
+  {id:'qwen',     label:'Qwen Code',      hint:'~/.qwen/skills'},
+  {id:'zencoder', label:'Zencoder',       hint:'~/.zencoder/skills'},
+  {id:'crush',    label:'Crush',          hint:'~/.crush/skills'},
+  {id:'pi',       label:'Pi',             hint:'~/.pi/agent/skills'},
+];
+
+const DB = 'skill-mgr-v5';
+const roots = new Map(); // id -> {label, handle, skills:[]}
+let allSkills = [];
+const selected = new Set();
+const connState = new Map(); // id -> {checked, handle}
+
+// ── IndexedDB ─────────────────────────────────────────────────────
+function idb(mode, fn) {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB, 1);
+    r.onupgradeneeded = e => { const d=e.target.result; if(!d.objectStoreNames.contains('r')) d.createObjectStore('r',{keyPath:'id'}); };
+    r.onsuccess = () => { const tx=r.result.transaction('r',mode); const ret=fn(tx.objectStore('r')); tx.oncomplete=()=>res(ret); tx.onerror=()=>rej(tx.error); };
+    r.onerror = () => rej(r.error);
+  });
+}
+async function dbPut(o) { await idb('readwrite', s=>s.put(o)); }
+async function dbDel(id) { await idb('readwrite', s=>s.delete(id)); }
+async function dbAll() { return idb('readonly', s=>s.getAll()); }
+
+// ── Scan ──────────────────────────────────────────────────────────
+async function scanDir(dh, rootId, rootLabel, parent, depth) {
+  if (depth > 5) return [];
+  const entries = [];
+  for await (const e of dh.values()) entries.push(e);
+  if (entries.some(e => e.kind==='file' && e.name==='SKILL.md')) {
+    const fh = await dh.getFileHandle('SKILL.md');
+    let text=''; try { text = await (await fh.getFile()).text(); } catch {}
+    const meta = parseFM(text);
+    let fc=0; try { fc = await cntF(dh); } catch {}
+    return [{ id:rootId+':'+dh.name, name:dh.name, rootId, rootLabel,
+      dirHandle:dh, parentHandle:parent, fileHandle:fh,
+      description:meta.description, tags:meta.tags, fileCount:fc, content:text }];
+  }
+  const skills = [];
+  for (const e of entries) {
+    if (e.kind!=='directory' || e.name.startsWith('.') || e.name==='node_modules' || e.name==='__pycache__') continue;
+    try {
+      const sub = await dh.getDirectoryHandle(e.name);
+      skills.push(...await scanDir(sub, rootId, rootLabel, dh, depth+1));
+    } catch {}
+  }
+  return skills;
+}
+
+function parseFM(c) {
+  const m={description:'',tags:[]};
+  if (!c.startsWith('---')) return m;
+  const p=c.split('---',3); if (p.length<3) return m;
+  for (const x of p[1].matchAll(/^(description|tags):\s*(.+)$/gm)) {
+    if (x[1]==='tags') m.tags=x[2].trim().replace(/^\[|\]$/g,'').split(',').map(t=>t.trim().replace(/^['"]|['"]$/g,'')).filter(Boolean);
+    else m.description=x[2].trim().replace(/^['"]|['"]$/g,'');
+  }
+  return m;
+}
+
+async function cntF(d) {
+  let c=0;
+  for await (const e of d.values()) {
+    if (e.kind==='file'&&!e.name.startsWith('.')) c++;
+    else if (e.kind==='directory'&&!e.name.startsWith('.')) try{c+=await cntF(await d.getDirectoryHandle(e.name));}catch{}
+  }
+  return c;
+}
+
+async function ensurePerm(h) {
+  if ((await h.queryPermission({mode:'readwrite'}))==='granted') return true;
+  return (await h.requestPermission({mode:'readwrite'}))==='granted';
+}
+
+async function scanRoot(rid) {
+  const r = roots.get(rid);
+  if (!r?.handle) return;
+  if (!(await ensurePerm(r.handle))) return;
+  r.skills = await scanDir(r.handle, rid, r.label, null, 0);
+}
+
+async function scanAll() {
+  $('stats').textContent = 'Scanning...';
+  for (const [id] of roots) await scanRoot(id);
+  rebuild();
+}
+
+function rebuild() {
+  allSkills = [];
+  for (const [,r] of roots) allSkills.push(...r.skills);
+  render();
+  $('stats').textContent = allSkills.length + ' skills';
+}
+
+// ── Diff ──────────────────────────────────────────────────────────
+function diff(a,b) {
+  const la=a.split('\n'),lb=b.split('\n'),m=la.length,n=lb.length;
+  const dp=Array.from({length:m+1},()=>new Uint16Array(n+1));
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+    dp[i][j]=la[i-1]===lb[j-1]?dp[i-1][j-1]+1:Math.max(dp[i-1][j],dp[i][j-1]);
+  const ops=[];let i=m,j=n;
+  while(i>0||j>0){
+    if(i>0&&j>0&&la[i-1]===lb[j-1]){ops.push({t:'=',l:la[--i]});j--;}
+    else if(j>0&&(i===0||dp[i][j-1]>=dp[i-1][j])) ops.push({t:'+',l:lb[--j]});
+    else ops.push({t:'-',l:la[--i]});
+  }
+  let added=0,removed=0,txt='';
+  ops.forEach(o=>{if(o.t==='+'){added++;txt+='+'+o.l+'\n';}else if(o.t==='-'){removed++;txt+='-'+o.l+'\n';}else txt+=' '+o.l+'\n';});
+  return {txt,added,removed,al:m,bl:n};
+}
+
+// ── UI helpers ────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function cm(id){$(id).classList.remove('active');}
+function toast(msg,type){const el=document.createElement('div');el.className='toast '+type;el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3000);}
+
+// ── Connect Modal ─────────────────────────────────────────────────
+function renderConnModal() {
+  const grid = $('agent-grid');
+  grid.innerHTML = '';
+  AGENTS.forEach(a => {
+    const r = roots.get(a.id);
+    const hasHandle = !!r?.handle;
+    const cnt = r?.skills?.length || 0;
+    const row = document.createElement('div');
+    row.className = 'agent-row';
+    row.innerHTML = `
+      <input type="checkbox" data-id="${a.id}" ${hasHandle?'checked':''}>
+      <span class="aname">${esc(a.label)}</span>
+      <span class="apath">${a.hint}</span>
+      <span class="astatus ${hasHandle?'on':'off'}">${hasHandle?cnt+' skills':'—'}</span>
+      <button class="btn sm" data-pick="${a.id}" ${hasHandle?'style="border-color:var(--green);color:var(--green)"':''}>${hasHandle?'Re-pick':'Pick'}</button>`;
+    grid.appendChild(row);
+  });
+
+  // Bind pick buttons
+  grid.querySelectorAll('[data-pick]').forEach(btn => {
+    btn.onclick = async e => {
+      e.stopPropagation();
+      const aid = btn.dataset.pick;
+      try {
+        const h = await window.showDirectoryPicker({mode:'readwrite'});
+        const agent = AGENTS.find(a=>a.id===aid);
+        roots.set(aid, {id:aid, label:agent?.label||h.name, handle:h, skills:[]});
+        await dbPut({id:aid, label:agent?.label||h.name});
+        // Check the checkbox
+        const cb = grid.querySelector(`input[data-id="${aid}"]`);
+        if (cb) cb.checked = true;
+        renderConnModal();
+      } catch(err) { if (err.name!=='AbortError') toast(err.message,'err'); }
+    };
+  });
+}
+
+$('btn-connect').onclick = () => {
+  renderConnModal();
+  $('m-conn').classList.add('active');
+};
+
+// Custom pick
+$('btn-custom-pick').onclick = async () => {
+  const label = $('custom-label').value.trim() || 'Custom';
+  try {
+    const h = await window.showDirectoryPicker({mode:'readwrite'});
+    const id = 'custom-' + Date.now();
+    roots.set(id, {id, label, handle:h, skills:[]});
+    await dbPut({id, label});
+    $('custom-label').value = '';
+    renderConnModal();
+    toast('Added: ' + label, 'ok');
+  } catch(e) { if (e.name!=='AbortError') toast(e.message,'err'); }
+};
+
+// Scan selected from modal
+$('btn-scan-selected').onclick = async () => {
+  const checked = [...$('agent-grid').querySelectorAll('input[type=checkbox]:checked')].map(cb=>cb.dataset.id);
+  if (!checked.length) { toast('Select at least one agent', 'err'); return; }
+
+  // For checked agents without handles, open picker one by one
+  for (const aid of checked) {
+    if (roots.get(aid)?.handle) continue;
+    const agent = AGENTS.find(a => a.id === aid);
+    try {
+      const h = await window.showDirectoryPicker({mode:'readwrite'});
+      roots.set(aid, {id:aid, label:agent?.label||h.name, handle:h, skills:[]});
+      await dbPut({id:aid, label:agent?.label||h.name});
+    } catch {
+      // User cancelled picker — skip this agent
+      const idx = checked.indexOf(aid);
+      if (idx > -1) checked.splice(idx, 1);
+    }
+  }
+
+  // Remove unchecked that were previously connected
+  for (const [id] of roots) {
+    if (!checked.includes(id)) {
+      roots.delete(id);
+      await dbDel(id);
+    }
+  }
+
+  cm('m-conn');
+  $('stats').textContent = 'Scanning...';
+  for (const id of checked) await scanRoot(id);
+  rebuild();
+  toast(allSkills.length + ' skills', 'ok');
+};
+
+// ── Main Render ───────────────────────────────────────────────────
+function render() {
+  const sel=$('filter'), prev=sel.value;
+  const rids=[...new Set(allSkills.map(s=>s.rootId))];
+  sel.innerHTML='<option value="">All Sources</option>';
+  rids.forEach(id=>{
+    const label=allSkills.find(s=>s.rootId===id)?.rootLabel||id;
+    sel.innerHTML+=`<option value="${id}">${label} (${allSkills.filter(s=>s.rootId===id).length})</option>`;
+  });
+  if(prev) sel.value=prev;
+
+  const q=$('search').value.toLowerCase();
+  const rf=sel.value;
+  let skills=allSkills;
+  if(q) skills=skills.filter(s=>s.name.toLowerCase().includes(q)||s.description.toLowerCase().includes(q));
+  if(rf) skills=skills.filter(s=>s.rootId===rf);
+
+  const groups=new Map();
+  skills.forEach(s=>{if(!groups.has(s.rootId))groups.set(s.rootId,{label:s.rootLabel,skills:[]});groups.get(s.rootId).skills.push(s);});
+  const nm=new Map();
+  skills.forEach(s=>{if(!nm.has(s.name))nm.set(s.name,[]);nm.get(s.name).push(s);});
+
+  const list=$('list');
+  list.innerHTML='';
+  if(!groups.size){list.innerHTML=`<div class="empty">${allSkills.length?'No matches':'Click "+ Connect" to add skill directories'}</div>`;return;}
+
+  for(const [rid,g] of groups){
+    const div=document.createElement('div');div.className='sg';
+    const hdr=document.createElement('div');hdr.className='sg-h';
+    hdr.innerHTML=`<span class="arrow open">▶</span><span class="gl">${esc(g.label)}</span><span class="gc">${g.skills.length}</span>`;
+    const body=document.createElement('div');body.className='sg-b open';
+    hdr.onclick=()=>{hdr.querySelector('.arrow').classList.toggle('open');body.classList.toggle('open');};
+    for(const s of g.skills){
+      const dup=(nm.get(s.name)?.length||0)>1;
+      const row=document.createElement('div');
+      row.className='sr'+(selected.has(s.id)?' sel':'');
+      const cb=document.createElement('input');cb.type='checkbox';cb.checked=selected.has(s.id);
+      row.appendChild(cb);
+      row.insertAdjacentHTML('beforeend',
+        `<span class="sn">${esc(s.name)}${dup?'<span class="dup">DUP</span>':''}</span>` +
+        `<span class="sd">${esc(s.description||'—')}</span>` +
+        `<span class="sm">${s.fileCount}f</span>`);
+      const sid=s.id;
+      cb.onchange=e=>{e.stopPropagation();tog(sid,row);};
+      row.onclick=e=>{if(e.target!==cb){cb.checked=!cb.checked;tog(sid,row);}};
+      row.ondblclick=()=>viewS(s);
+      body.appendChild(row);
+    }
+    div.appendChild(hdr);div.appendChild(body);list.appendChild(div);
+  }
+  updBtns();
+}
+
+function tog(id,row){if(selected.has(id)){selected.delete(id);row.classList.remove('sel');}else{selected.add(id);row.classList.add('sel');}updBtns();}
+function updBtns(){
+  const n=selected.size;
+  $('btn-cmp').disabled=n!==2;$('btn-view').disabled=n!==1;$('btn-del').disabled=n<1;$('btn-rst').disabled=n<1;
+  $('sel-count').textContent=n?n+' selected':'';
+}
+
+function viewS(s){
+  $('v-title').textContent=s.name+' — SKILL.md';
+  $('v-body').textContent=s.content||'(empty)';
+  $('m-view').classList.add('active');
+}
+
+// ── Events ────────────────────────────────────────────────────────
+$('btn-rescan').onclick=async()=>{await scanAll();toast(allSkills.length+' skills','ok');};
+
+$('btn-cmp').onclick=()=>{
+  const sk=[...selected].map(id=>allSkills.find(s=>s.id===id)).filter(Boolean);
+  if(sk.length!==2)return;
+  const d=diff(sk[0].content||'',sk[1].content||'');
+  $('d-title').textContent=sk[0].name+' ('+sk[0].rootLabel+' vs '+sk[1].rootLabel+')';
+  $('d-stats').innerHTML=`<span>${d.al} vs ${d.bl} lines</span><span class="a">+${d.added}</span><span class="r">-${d.removed}</span>`;
+  const el=$('d-body');
+  if(!d.txt.trim()) el.innerHTML='<span style="color:var(--green)">Identical</span>';
+  else el.innerHTML=d.txt.split('\n').map(l=>l.startsWith('+')?'<span class="la">'+esc(l)+'</span>':l.startsWith('-')?'<span class="ld">'+esc(l)+'</span>':esc(l)).join('\n');
+  $('m-diff').classList.add('active');
+};
+
+$('btn-view').onclick=()=>{const s=allSkills.find(s=>selected.has(s.id));if(s)viewS(s);};
+
+$('btn-del').onclick=async()=>{
+  const sk=[...selected].map(id=>allSkills.find(s=>s.id===id)).filter(Boolean);
+  if(!confirm('Delete '+sk.length+' skill(s)?\n'+sk.map(s=>s.name).join(', ')))return;
+  let ok=0;
+  for(const s of sk){try{if(s.parentHandle)await s.parentHandle.removeEntry(s.name,{recursive:true});ok++;}catch(e){toast(s.name+': '+e.message,'err');}}
+  selected.clear();await scanAll();toast('Deleted '+ok+' skill(s)','ok');
+};
+
+$('btn-rst').onclick=()=>{selected.clear();render();};
+
+let st;$('search').oninput=()=>{clearTimeout(st);st=setTimeout(render,200);};
+$('filter').onchange=render;
+document.querySelectorAll('.mo').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('active');});
+
+// ── Init ──────────────────────────────────────────────────────────
+(async()=>{
+  try{
+    const stored=await dbAll();
+    for(const item of stored){
+      if(!item.handle)continue;
+      roots.set(item.id,{id:item.id,label:item.label,handle:item.handle,skills:[]});
+    }
+  }catch{}
+  if(roots.size>0) await scanAll();
+  else render();
+})();
+</script>
+</body>
+</html>
