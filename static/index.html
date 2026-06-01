@@ -5,478 +5,516 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Skill Manager</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-:root {
-  --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3;
-  --text2: #8b949e; --accent: #58a6ff; --green: #3fb950; --red: #f85149;
-  --orange: #d29922; --purple: #bc8cff; --card: #1c2128;
-}
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height:100vh; }
-a { color: var(--accent); text-decoration: none; }
-button { cursor: pointer; font-family: inherit; }
-input, select { font-family: inherit; }
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--card:#1c2128}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column}
+a{color:var(--accent)}button{cursor:pointer;font-family:inherit}
+input,select{font-family:inherit}
 
-/* Layout */
-.app { display: flex; height: 100vh; }
-.sidebar { width: 280px; min-width: 280px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-.main { flex: 1; overflow-y: auto; padding: 24px; }
+/* Top nav */
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar h1{font-size:16px;font-weight:700;white-space:nowrap}
+.topbar .sep{width:1px;height:20px;background:var(--border)}
+.top-tabs{display:flex;gap:4px}
+.top-tabs button{background:none;border:1px solid transparent;color:var(--text2);padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500}
+.top-tabs button:hover{background:var(--card)}
+.top-tabs button.active{color:var(--accent);border-color:var(--accent);background:rgba(88,166,255,.08)}
+.topbar .spacer{flex:1}
+.search-box{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:6px;font-size:13px;width:200px}
+.search-box:focus{outline:none;border-color:var(--accent)}
 
-/* Sidebar */
-.sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
-.sidebar-header h1 { font-size: 16px; font-weight: 600; }
-.sidebar-header p { font-size: 12px; color: var(--text2); margin-top: 4px; }
-.dir-list { flex: 1; overflow-y: auto; padding: 8px; }
-.dir-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 2px; }
-.dir-item:hover { background: var(--card); }
-.dir-item .label { display: flex; align-items: center; gap: 8px; }
-.dir-item .badge { background: var(--border); color: var(--text2); font-size: 11px; padding: 1px 6px; border-radius: 10px; }
-.dir-item .badge.exists { background: #1a3a2a; color: var(--green); }
-.dir-item .badge.empty { background: #3a2a1a; color: var(--orange); }
-.dir-item .remove-btn { background: none; border: none; color: var(--text2); font-size: 16px; padding: 2px 4px; border-radius: 4px; }
-.dir-item .remove-btn:hover { color: var(--red); background: rgba(248,81,73,0.15); }
+/* Main content */
+.content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.panel{flex:1;overflow-y:auto;padding:20px 24px;display:none}
+.panel.active{display:block}
 
-.add-dir-form { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
-.add-dir-form input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 12px; }
-.add-dir-form button { background: var(--accent); color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+/* ---- Discover panel ---- */
+.discover-header{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.discover-header .info{font-size:13px;color:var(--text2)}
+.btn{border:1px solid var(--border);background:var(--surface);color:var(--text);padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--card);border-color:var(--text2)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{opacity:.9}
+.btn.danger{color:var(--red);border-color:var(--red)}
+.btn.danger:hover{background:rgba(248,81,73,.1)}
+.btn.sm{padding:4px 10px;font-size:12px}
 
-/* Toolbar */
-.toolbar { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
-.toolbar h2 { font-size: 20px; font-weight: 600; margin-right: auto; }
-.search-box { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 14px; border-radius: 8px; font-size: 14px; width: 260px; }
-.search-box:focus { outline: none; border-color: var(--accent); }
-.toolbar-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
-.toolbar-btn:hover { background: var(--card); border-color: var(--text2); }
-.toolbar-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.1); }
-.toolbar-btn.danger { color: var(--red); }
-.toolbar-btn.danger:hover { background: rgba(248,81,73,0.1); border-color: var(--red); }
+/* Directory cards (discover) */
+.dir-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.dir-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .15s}
+.dir-card:hover{border-color:var(--text2)}
+.dir-card.subscribed{border-color:var(--green)}
+.dir-card-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)}
+.dir-card-head .toggle{width:20px;height:20px;accent-color:var(--green);cursor:pointer}
+.dir-card-head .icon{font-size:18px}
+.dir-card-head .name{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dir-card-head .root{font-size:11px;color:var(--text2);background:var(--card);padding:2px 8px;border-radius:4px;white-space:nowrap}
+.dir-card-body{padding:10px 14px;font-size:13px;color:var(--text2);max-height:160px;overflow:hidden}
+.dir-card-body .skill-name{color:var(--text);font-weight:500}
+.dir-card-body .path{font-size:11px;font-family:'SF Mono',Monaco,monospace;opacity:.5;margin-top:2px}
 
-/* Stats bar */
-.stats { display: flex; gap: 16px; margin-bottom: 20px; font-size: 13px; color: var(--text2); }
-.stats span { background: var(--surface); padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border); }
-.stats .num { color: var(--accent); font-weight: 600; }
+/* ---- Skills panel ---- */
+.toolbar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.toolbar .spacer{flex:1}
+.stats{display:flex;gap:10px;font-size:12px;color:var(--text2)}
+.stats .num{color:var(--accent);font-weight:600}
+.skill-group{margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.group-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none}
+.group-header:hover{background:var(--card)}
+.group-name{font-size:14px;font-weight:600;color:var(--accent)}
+.group-meta{font-size:12px;color:var(--text2)}
+.group-badge{background:var(--orange);color:#000;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
+.group-chevron{margin-left:auto;color:var(--text2);transition:transform .2s;font-size:12px}
+.group-chevron.open{transform:rotate(90deg)}
+.group-body{border-top:1px solid var(--border)}
+.skill-card{display:flex;align-items:flex-start;padding:12px 16px;gap:12px;border-bottom:1px solid var(--border)}
+.skill-card:last-child{border-bottom:none}
+.skill-checkbox{margin-top:2px;width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.skill-info{flex:1;min-width:0}
+.skill-info .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.skill-info .name{font-size:13px;font-weight:600}
+.skill-info .agent-tag{font-size:11px;background:var(--card);border:1px solid var(--border);color:var(--text2);padding:1px 7px;border-radius:4px}
+.skill-info .desc{font-size:12px;color:var(--text2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:500px}
+.skill-info .tags{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
+.skill-info .tag{font-size:11px;background:rgba(188,140,255,.12);color:var(--purple);padding:1px 7px;border-radius:4px}
+.skill-info .path-text{font-size:11px;color:var(--text2);font-family:'SF Mono',Monaco,monospace;opacity:.5;margin-top:3px}
+.skill-actions{display:flex;gap:4px;flex-shrink:0;align-self:center}
+.action-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:3px 8px;border-radius:5px;font-size:12px}
+.action-btn:hover{color:var(--text);border-color:var(--text2)}
+.action-btn.delete:hover{color:var(--red);border-color:var(--red);background:rgba(248,81,73,.08)}
 
-/* Skill groups */
-.skill-group { margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.group-header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; cursor: pointer; user-select: none; }
-.group-header:hover { background: var(--card); }
-.group-name { font-size: 15px; font-weight: 600; }
-.group-meta { font-size: 12px; color: var(--text2); }
-.group-badge { background: var(--orange); color: #000; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
-.group-chevron { margin-left: auto; color: var(--text2); transition: transform 0.2s; }
-.group-chevron.open { transform: rotate(90deg); }
-.group-body { border-top: 1px solid var(--border); }
+/* ---- Scan roots panel ---- */
+.scan-root-list{margin-top:12px}
+.scan-root-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px}
+.scan-root-item .path{flex:1;font-family:'SF Mono',Monaco,monospace;font-size:12px;color:var(--text2)}
+.scan-root-item .remove{background:none;border:none;color:var(--text2);font-size:16px;padding:2px 6px;border-radius:4px}
+.scan-root-item .remove:hover{color:var(--red);background:rgba(248,81,73,.1)}
+.add-root-row{display:flex;gap:8px;margin-top:12px}
+.add-root-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px}
+.add-root-row input:focus{outline:none;border-color:var(--accent)}
+.preset-list{margin-top:16px}
+.preset-chip{display:inline-block;background:var(--card);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:12px;margin:3px;cursor:pointer;transition:all .15s}
+.preset-chip:hover{border-color:var(--accent);color:var(--accent)}
+.preset-chip.added{border-color:var(--green);color:var(--green);background:rgba(63,185,80,.08);cursor:default}
 
-/* Skill card */
-.skill-card { display: flex; align-items: flex-start; padding: 16px 18px; gap: 14px; border-bottom: 1px solid var(--border); }
-.skill-card:last-child { border-bottom: none; }
-.skill-checkbox { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
-.skill-info { flex: 1; min-width: 0; }
-.skill-info .name { font-size: 14px; font-weight: 600; color: var(--accent); }
-.skill-info .agent-tag { display: inline-block; font-size: 11px; background: var(--card); border: 1px solid var(--border); color: var(--text2); padding: 1px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
-.skill-info .desc { font-size: 13px; color: var(--text2); margin-top: 4px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 600px; }
-.skill-info .tags { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
-.skill-info .tag { font-size: 11px; background: rgba(188,140,255,0.15); color: var(--purple); padding: 2px 8px; border-radius: 4px; }
-.skill-info .path-text { font-size: 11px; color: var(--text2); margin-top: 4px; font-family: 'SF Mono', Monaco, monospace; opacity: 0.6; }
-.skill-actions { display: flex; gap: 6px; flex-shrink: 0; align-self: center; }
-.action-btn { background: none; border: 1px solid var(--border); color: var(--text2); padding: 4px 10px; border-radius: 6px; font-size: 12px; }
-.action-btn:hover { border-color: var(--text2); color: var(--text); }
-.action-btn.delete:hover { border-color: var(--red); color: var(--red); background: rgba(248,81,73,0.08); }
+/* ---- Modals ---- */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:90vw;max-width:1100px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.4)}
+.modal.sm{max-width:400px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.modal-header h3{font-size:15px}
+.modal-close{background:none;border:none;color:var(--text2);font-size:22px;padding:2px 6px;border-radius:6px}
+.modal-close:hover{background:var(--card);color:var(--text)}
+.modal-body{flex:1;overflow:auto}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--border)}
 
-/* Compare panel */
-.compare-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.compare-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 90vw; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 16px 48px rgba(0,0,0,0.4); }
-.compare-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border); }
-.compare-header h3 { font-size: 16px; }
-.compare-header .close-btn { background: none; border: none; color: var(--text2); font-size: 24px; padding: 4px 8px; border-radius: 6px; }
-.compare-header .close-btn:hover { background: var(--card); color: var(--text); }
-.compare-stats { display: flex; gap: 16px; padding: 12px 24px; font-size: 13px; border-bottom: 1px solid var(--border); background: var(--card); }
-.compare-stats .stat { display: flex; align-items: center; gap: 6px; }
-.compare-stats .stat .num { font-weight: 600; }
-.compare-stats .stat.added .num { color: var(--green); }
-.compare-stats .stat.removed .num { color: var(--red); }
-.compare-stats .stat.changed .num { color: var(--orange); }
-.compare-body { flex: 1; overflow: auto; padding: 0; }
-.diff-table { width: 100%; font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 1.6; border-collapse: collapse; }
-.diff-table td { padding: 0 16px; white-space: pre-wrap; word-break: break-all; vertical-align: top; }
-.diff-table .line-num { width: 40px; text-align: right; color: var(--text2); user-select: none; opacity: 0.5; }
-.diff-table tr.diff-add { background: rgba(63,185,80,0.12); }
-.diff-table tr.diff-add td:first-child::before { content: '+'; position: absolute; left: 4px; color: var(--green); font-weight: 700; }
-.diff-table tr.diff-del { background: rgba(248,81,73,0.12); }
-.diff-table tr.diff-del td:first-child::before { content: '-' ; position: absolute; left: 4px; color: var(--red); font-weight: 700; }
-.diff-table tr.diff-del { text-decoration: none; }
-.diff-table tr.diff-hunk { background: rgba(88,166,255,0.08); color: var(--accent); }
-.diff-table td { position: relative; padding-left: 24px; }
-.diff-table .line-num { padding-left: 16px; }
+/* Diff */
+.compare-stats{display:flex;gap:14px;padding:10px 20px;font-size:13px;border-bottom:1px solid var(--border);background:var(--card)}
+.compare-stats .stat{display:flex;align-items:center;gap:5px}
+.compare-stats .num{font-weight:600}
+.compare-stats .added .num{color:var(--green)}
+.compare-stats .removed .num{color:var(--red)}
+.compare-stats .changed .num{color:var(--orange)}
+.diff-table{width:100%;font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:12px;line-height:1.55;border-collapse:collapse}
+.diff-table td{padding:0 14px;white-space:pre-wrap;word-break:break-all;vertical-align:top;position:relative;padding-left:28px}
+.diff-table .ln{width:36px;text-align:right;color:var(--text2);opacity:.4;user-select:none;padding-left:14px}
+.diff-table tr.da{background:rgba(63,185,80,.1)}
+.diff-table tr.dd{background:rgba(248,81,73,.1)}
+.diff-table tr.dh{background:rgba(88,166,255,.06);color:var(--accent)}
 
-/* Skill viewer */
-.viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.viewer-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 90vw; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 16px 48px rgba(0,0,0,0.4); }
-.viewer-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border); }
-.viewer-body { flex: 1; overflow: auto; padding: 20px 24px; }
-.viewer-body pre { font-family: 'SF Mono', Monaco, monospace; font-size: 13px; line-height: 1.6; color: var(--text); white-space: pre-wrap; word-break: break-all; }
+/* Confirm */
+.confirm-body{padding:20px}
+.confirm-body h4{font-size:15px;color:var(--red);margin-bottom:8px}
+.confirm-body p{font-size:13px;color:var(--text2);line-height:1.5}
+.confirm-body .path{font-family:'SF Mono',Monaco;font-size:11px;background:var(--bg);padding:6px 10px;border-radius:6px;margin-top:8px;word-break:break-all}
 
-/* Confirm dialog */
-.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.confirm-dialog { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 400px; box-shadow: 0 16px 48px rgba(0,0,0,0.4); }
-.confirm-dialog h4 { font-size: 16px; margin-bottom: 10px; color: var(--red); }
-.confirm-dialog p { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
-.confirm-dialog .btns { display: flex; gap: 10px; justify-content: flex-end; }
-.confirm-dialog .btn { padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid var(--border); }
-.confirm-dialog .btn.cancel { background: var(--card); color: var(--text); }
-.confirm-dialog .btn.confirm { background: var(--red); color: #fff; border-color: var(--red); }
-
-/* Loading */
-.loading { text-align: center; padding: 60px; color: var(--text2); }
-.loading .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Empty state */
-.empty { text-align: center; padding: 60px; color: var(--text2); }
-.empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+/* Loading / Empty */
+.loading{text-align:center;padding:60px;color:var(--text2)}
+.spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px;color:var(--text2)}
+.empty .icon{font-size:42px;margin-bottom:10px;opacity:.35}
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text2); }
-
-/* Responsive */
-@media (max-width: 768px) {
-  .app { flex-direction: column; }
-  .sidebar { width: 100%; min-width: 0; height: auto; max-height: 200px; border-right: none; border-bottom: 1px solid var(--border); }
-  .main { padding: 16px; }
-  .toolbar { flex-direction: column; align-items: stretch; }
-  .search-box { width: 100%; }
-}
+::-webkit-scrollbar{width:7px;height:7px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+@media(max-width:768px){.search-box{width:140px}.dir-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<div class="app">
-  <!-- Sidebar -->
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <h1>🗂️ Skill Manager</h1>
-      <p>跨 Agent 技能浏览器</p>
+<!-- Top bar -->
+<div class="topbar">
+  <h1>🗂️ Skill Manager</h1>
+  <div class="sep"></div>
+  <div class="top-tabs">
+    <button class="active" onclick="switchTab('discover',this)">🔍 发现</button>
+    <button onclick="switchTab('skills',this)">📦 已订阅</button>
+    <button onclick="switchTab('roots',this)">⚙️ 扫描路径</button>
+  </div>
+  <div class="spacer"></div>
+  <input class="search-box" id="searchInput" placeholder="搜索..." oninput="onSearch(this.value)">
+</div>
+
+<!-- Content -->
+<div class="content">
+
+  <!-- Discover -->
+  <div class="panel active" id="panel-discover">
+    <div class="discover-header">
+      <span class="info" id="discoverInfo">扫描中...</span>
+      <button class="btn primary sm" onclick="discoverAll()">🔄 重新扫描</button>
+      <button class="btn sm" onclick="subscribeAllVisible()">✅ 订阅全部</button>
     </div>
-    <div class="dir-list" id="dirList"></div>
-    <div class="add-dir-form">
-      <input type="text" id="newDirLabel" placeholder="名称" style="width:70px">
-      <input type="text" id="newDirPath" placeholder="~/path/to/skills" style="flex:1">
-      <button onclick="addDirectory()">+</button>
-    </div>
+    <div class="dir-grid" id="discoverGrid"><div class="loading"><div class="spinner"></div><br>扫描中...</div></div>
   </div>
 
-  <!-- Main -->
-  <div class="main">
+  <!-- Subscribed skills -->
+  <div class="panel" id="panel-skills">
     <div class="toolbar">
-      <h2>Skills</h2>
-      <input class="search-box" type="text" id="searchInput" placeholder="🔍 搜索技能..." oninput="debounceSearch()">
-      <button class="toolbar-btn" id="compareBtn" onclick="openCompare()" style="display:none">
-        ⚖️ 对比选中 (<span id="compareCount">0</span>)
-      </button>
-      <button class="toolbar-btn danger" id="deleteBtn" onclick="deleteSelected()" style="display:none">
-        🗑️ 删除选中 (<span id="deleteCount">0</span>)
-      </button>
+      <button class="btn sm" id="compareBtn" onclick="openCompare()" style="display:none">⚖️ 对比 (<span id="cmpN">0</span>)</button>
+      <button class="btn sm danger" id="deleteBtn" onclick="deleteSelected()" style="display:none">🗑️ 删除 (<span id="delN">0</span>)</button>
+      <div class="spacer"></div>
+      <div class="stats" id="statsBar"></div>
     </div>
-    <div class="stats" id="statsBar"></div>
-    <div id="skillContainer"><div class="loading"><div class="spinner"></div><br>扫描中...</div></div>
+    <div id="skillContainer"><div class="empty"><div class="icon">📭</div><p>还没有订阅任何技能目录<br>去「发现」页订阅吧</p></div></div>
+  </div>
+
+  <!-- Scan roots -->
+  <div class="panel" id="panel-roots">
+    <h3 style="font-size:15px;margin-bottom:4px">自定义扫描路径</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:8px">添加额外的目录来发现 SKILL.md 文件</p>
+    <div class="add-root-row">
+      <input id="newRootPath" placeholder="~/path/to/scan">
+      <button class="btn sm primary" onclick="addScanRoot()">添加</button>
+    </div>
+    <div class="scan-root-list" id="scanRootList"></div>
+    <h3 style="font-size:15px;margin:24px 0 8px">预设路径（点击添加）</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:8px">灰色 = 已在默认列表中，点击无效</p>
+    <div class="preset-list" id="presetList"></div>
   </div>
 </div>
 
-<!-- Compare Panel -->
-<div class="compare-overlay" id="compareOverlay" style="display:none" onclick="if(event.target===this)closeCompare()">
-  <div class="compare-panel">
-    <div class="compare-header">
-      <h3 id="compareTitle">⚖️ 技能对比</h3>
-      <button class="close-btn" onclick="closeCompare()">&times;</button>
-    </div>
+<!-- Compare modal -->
+<div class="overlay" id="compareOverlay" style="display:none" onclick="if(event.target===this)closeCompare()">
+  <div class="modal">
+    <div class="modal-header"><h3 id="compareTitle">⚖️ 对比</h3><button class="modal-close" onclick="closeCompare()">&times;</button></div>
     <div class="compare-stats" id="compareStats"></div>
-    <div class="compare-body" id="compareBody"><div class="loading"><div class="spinner"></div><br>生成差异...</div></div>
+    <div class="modal-body" id="compareBody"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 </div>
 
-<!-- Skill Viewer -->
-<div class="viewer-overlay" id="viewerOverlay" style="display:none" onclick="if(event.target===this)closeViewer()">
-  <div class="viewer-panel">
-    <div class="viewer-header">
-      <h3 id="viewerTitle">SKILL.md</h3>
-      <button class="close-btn" onclick="closeViewer()">&times;</button>
+<!-- Viewer modal -->
+<div class="overlay" id="viewerOverlay" style="display:none" onclick="if(event.target===this)closeViewer()">
+  <div class="modal" style="max-width:800px">
+    <div class="modal-header"><h3 id="viewerTitle">📖</h3><button class="modal-close" onclick="closeViewer()">&times;</button></div>
+    <div class="modal-body"><pre id="viewerContent" style="font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all;padding:16px"></pre></div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="overlay" id="confirmOverlay" style="display:none">
+  <div class="modal sm">
+    <div class="confirm-body">
+      <h4>⚠️ 确认删除</h4>
+      <p id="confirmMsg"></p>
+      <div class="path" id="confirmPath"></div>
     </div>
-    <div class="viewer-body"><pre id="viewerContent"></pre></div>
-  </div>
-</div>
-
-<!-- Confirm Dialog -->
-<div class="confirm-overlay" id="confirmOverlay" style="display:none">
-  <div class="confirm-dialog">
-    <h4>⚠️ 确认删除</h4>
-    <p id="confirmMsg"></p>
-    <div class="btns">
-      <button class="btn cancel" onclick="closeConfirm()">取消</button>
-      <button class="btn confirm" id="confirmBtn" onclick="confirmDelete()">删除</button>
+    <div class="modal-footer">
+      <button class="btn sm" onclick="closeConfirm()">取消</button>
+      <button class="btn sm danger" id="confirmBtn" onclick="doConfirm()">删除</button>
     </div>
   </div>
 </div>
 
 <script>
-const API = '';
-let allGroups = [];
-let selectedSkills = new Map(); // skill_md_path -> skill info
-let searchTimer = null;
-let expandedGroups = new Set();
+const API='';
+let discoveredDirs=[];
+let currentTab='discover';
+let selected=new Map();
+let expandedGroups=new Set();
+let searchQ='';
+let confirmCb=null;
+const DEFAULT_ROOTS=EXPAND_DEFAULTS;
 
-// ---- Init ----
-async function init() {
-  await loadDirectories();
-  await loadSkills();
+function EXPAND_DEFAULTS(){return["~/.hermes/skills","~/.copilot/skills","~/.claude/skills","~/.cursor/skills","~/.config/opencode/skills","~/.codex/skills","~/.agents/skills","~/.gemini/skills","~/.codeium/windsurf/skills","~/.openclaw/skills","~/.trae/skills","~/.codebuddy/skills","~/.factory/skills","~/.config/agents/skills","~/.kilocode/skills","~/.mux/skills","~/.qoder/skills","~/.qwen/skills","~/.zencoder/skills","~/.crush/skills","~/.pi/agent/skills"]}
+
+// ---- Tabs ----
+function switchTab(tab,btn){
+  currentTab=tab;
+  document.querySelectorAll('.top-tabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='discover')discoverAll();
+  if(tab==='skills')loadSkills();
+  if(tab==='roots'){loadScanRoots();renderPresets();}
 }
 
-// ---- Directories ----
-async function loadDirectories() {
-  try {
-    const resp = await fetch(`${API}/api/directories`);
-    const dirs = await resp.json();
-    const el = document.getElementById('dirList');
-    el.innerHTML = dirs.map(d => `
-      <div class="dir-item">
-        <div class="label">
-          ${d.exists ? '📁' : '📂'} ${esc(d.label)}
-          <span class="badge ${d.exists ? (d.skill_count > 0 ? 'exists' : 'empty') : ''}">${d.skill_count}</span>
-        </div>
-        ${!DEFAULT_LABELS.includes(d.label) ? `<button class="remove-btn" onclick="removeDirectory('${esc(d.label)}','${esc(d.path)}')" title="移除">✕</button>` : ''}
-      </div>
-    `).join('');
-  } catch(e) { console.error('loadDirectories failed:', e); }
-}
-
-const DEFAULT_LABELS = ['Hermes Agent','GitHub Copilot','Claude Code','Cursor','OpenCode','Codex','Cline','Gemini CLI','Windsurf','OpenClaw','Trae','CodeBuddy','Droid','Amp','Kilo Code','Mux','Qoder','Qwen Code','Zencoder','Kimi CLI'];
-
-async function addDirectory() {
-  const label = document.getElementById('newDirLabel').value.trim();
-  const path = document.getElementById('newDirPath').value.trim();
-  if (!label || !path) return;
-  await fetch(`${API}/api/directories`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({label, path}) });
-  document.getElementById('newDirLabel').value = '';
-  document.getElementById('newDirPath').value = '';
-  await loadDirectories();
-  await loadSkills();
-}
-
-async function removeDirectory(label, path) {
-  await fetch(`${API}/api/directories?label=${encodeURIComponent(label)}&path=${encodeURIComponent(path)}`, { method: 'DELETE' });
-  await loadDirectories();
-  await loadSkills();
-}
-
-// ---- Skills ----
-async function loadSkills(search) {
-  try {
-    const url = search ? `${API}/api/skills/grouped?search=${encodeURIComponent(search)}` : `${API}/api/skills/grouped`;
-    const resp = await fetch(url);
-    allGroups = await resp.json();
-    renderSkills();
-  } catch(e) {
-    document.getElementById('skillContainer').innerHTML = `<div class="empty"><div class="icon">🔌</div><p>无法连接后端，确保 <code>main.py</code> 正在运行 (端口 8900)</p></div>`;
+// ---- Discover ----
+async function discoverAll(){
+  const el=document.getElementById('discoverGrid');
+  el.innerHTML='<div class="loading"><div class="spinner"></div><br>扫描中...</div>';
+  try{
+    const r=await fetch(API+'/api/discover');
+    discoveredDirs=await r.json();
+    renderDiscover();
+  }catch(e){
+    el.innerHTML='<div class="empty"><div class="icon">🔌</div><p>无法连接后端</p></div>';
   }
 }
 
-function renderSkills() {
-  const container = document.getElementById('skillContainer');
-  // Stats
-  const totalSkills = allGroups.reduce((s,g) => s + g.instances.length, 0);
-  const dupGroups = allGroups.filter(g => g.instances.length > 1);
-  const uniqueNames = allGroups.length;
-  document.getElementById('statsBar').innerHTML = `
-    <span>共 <span class="num">${uniqueNames}</span> 个技能</span>
-    <span>总计 <span class="num">${totalSkills}</span> 个实例</span>
-    <span>重复 <span class="num">${dupGroups.length}</span> 组</span>
-  `;
+function renderDiscover(){
+  const subs=new Set();
+  // fetch subscriptions for quick check
+  fetch(API+'/api/subscriptions').then(r=>r.json()).then(skills=>{
+    skills.forEach(s=>subs.add(s.skill_dir));
+    renderDiscoverWith(subs);
+  }).catch(()=>renderDiscoverWith(subs));
+}
 
-  if (allGroups.length === 0) {
-    container.innerHTML = '<div class="empty"><div class="icon">📭</div><p>没有找到技能</p></div>';
-    return;
-  }
-
-  container.innerHTML = allGroups.map(g => {
-    const isDup = g.instances.length > 1;
-    const isOpen = expandedGroups.has(g.name) || isDup;
-    return `
-    <div class="skill-group">
-      <div class="group-header" onclick="toggleGroup('${esc(g.name)}')">
-        <span class="group-chevron ${isOpen?'open':''}">▶</span>
-        <span class="group-name">${esc(g.name)}</span>
-        ${isDup ? `<span class="group-badge">${g.instances.length}x</span>` : ''}
-        <span class="group-meta">${g.instances.length === 1 ? g.instances[0].agent : g.instances.map(i=>i.agent).join(', ')}</span>
+function renderDiscoverWith(subs){
+  const el=document.getElementById('discoverGrid');
+  document.getElementById('discoverInfo').textContent=`发现 ${discoveredDirs.length} 个技能目录`;
+  const filtered=searchQ?discoveredDirs.filter(d=>d.path.toLowerCase().includes(searchQ)||d.label.toLowerCase().includes(searchQ)):discoveredDirs;
+  if(!filtered.length){el.innerHTML='<div class="empty"><p>没有找到匹配的目录</p></div>';return;}
+  el.innerHTML=filtered.map(d=>{
+    const isSub=subs.has(d.path);
+    return `<div class="dir-card ${isSub?'subscribed':''}">
+      <div class="dir-card-head">
+        <input type="checkbox" class="toggle" ${isSub?'checked':''} onchange="toggleSub('${escA(d.path)}',this.checked)">
+        <span class="icon">${isSub?'✅':'📄'}</span>
+        <span class="name">${esc(basename(d.path))}</span>
+        <span class="root">${esc(d.label)}</span>
       </div>
-      <div class="group-body" style="display:${isOpen?'block':'none'}">
-        ${g.instances.map(sk => `
-          <div class="skill-card">
-            <input type="checkbox" class="skill-checkbox" ${selectedSkills.has(sk.skill_md_path)?'checked':''} onchange="toggleSelect('${escJs(sk.skill_md_path)}', this, ${JSON.stringify(sk).replace(/"/g,'&quot;')})" title="选中以对比或批量删除">
-            <div class="skill-info">
-              <div>
-                <span class="name">${esc(sk.name)}</span>
-                <span class="agent-tag">${esc(sk.agent)}</span>
-              </div>
-              ${sk.description ? `<div class="desc" title="${esc(sk.description)}">${esc(sk.description)}</div>` : ''}
-              ${sk.tags.length ? `<div class="tags">${sk.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
-              <div class="path-text">${esc(sk.full_path)}</div>
-            </div>
-            <div class="skill-actions">
-              <button class="action-btn" onclick="viewSkill('${escJs(sk.skill_md_path)}')">📖</button>
-              <button class="action-btn delete" onclick="deleteSkill('${escJs(sk.full_path)}','${esc(sk.name)}','${esc(sk.agent)}')">🗑️</button>
-            </div>
-          </div>
-        `).join('')}
+      <div class="dir-card-body">
+        <div class="skill-name">${esc(basename(d.path))}</div>
+        <div class="path">${esc(d.path)}</div>
       </div>
     </div>`;
   }).join('');
 }
 
-function toggleGroup(name) {
-  if (expandedGroups.has(name)) expandedGroups.delete(name);
-  else expandedGroups.add(name);
-  renderSkills();
-}
-
-// ---- Selection ----
-function toggleSelect(path, checkbox, skillJson) {
-  if (checkbox.checked) {
-    selectedSkills.set(path, skillJson);
-  } else {
-    selectedSkills.delete(path);
+async function toggleSub(path,checked){
+  if(checked){
+    await fetch(API+'/api/subscriptions?path='+encodeURIComponent(path),{method:'POST'});
+  }else{
+    await fetch(API+'/api/subscriptions?path='+encodeURIComponent(path),{method:'DELETE'});
   }
-  updateActionButtons();
+  renderDiscover();
 }
 
-function updateActionButtons() {
-  const n = selectedSkills.size;
-  document.getElementById('compareBtn').style.display = n >= 2 ? '' : 'none';
-  document.getElementById('compareCount').textContent = n;
-  document.getElementById('deleteBtn').style.display = n >= 1 ? '' : 'none';
-  document.getElementById('deleteCount').textContent = n;
+async function subscribeAllVisible(){
+  const paths=discoveredDirs.map(d=>d.path);
+  await fetch(API+'/api/subscriptions/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(paths)});
+  renderDiscover();
 }
 
-// ---- Compare ----
-async function openCompare() {
-  const entries = [...selectedSkills.entries()];
-  if (entries.length < 2) return alert('请至少选择 2 个技能进行对比');
-  // Take first 2
-  const [pathA, skillA] = entries[0];
-  const [pathB, skillB] = entries[1];
-  document.getElementById('compareOverlay').style.display = 'flex';
-  document.getElementById('compareTitle').textContent = `⚖️ ${skillA.name} — ${skillA.agent} vs ${skillB.agent}`;
-  document.getElementById('compareBody').innerHTML = '<div class="loading"><div class="spinner"></div><br>生成差异...</div>';
-  try {
-    const resp = await fetch(`${API}/api/diff?path_a=${encodeURIComponent(pathA)}&path_b=${encodeURIComponent(pathB)}`);
-    const diff = await resp.json();
-    document.getElementById('compareStats').innerHTML = `
-      <div class="stat added"><span class="num">+${diff.added}</span> 新增</div>
-      <div class="stat removed"><span class="num">-${diff.removed}</span> 删除</div>
-      <div class="stat changed"><span class="num">~${diff.changed}</span> 变更</div>
-      <div class="stat">A: ${diff.a_lines} 行</div>
-      <div class="stat">B: ${diff.b_lines} 行</div>
-    `;
-    renderDiff(diff.unified_diff);
-  } catch(e) {
-    document.getElementById('compareBody').innerHTML = `<div class="empty"><p>对比失败: ${e.message}</p></div>`;
+// ---- Skills ----
+async function loadSkills(){
+  const el=document.getElementById('skillContainer');
+  try{
+    const url=searchQ?API+'/api/skills?search='+encodeURIComponent(searchQ):API+'/api/skills';
+    const r=await fetch(url);
+    const groups=await r.json();
+    renderSkills(groups);
+  }catch(e){
+    el.innerHTML='<div class="empty"><div class="icon">🔌</div><p>无法加载</p></div>';
   }
 }
 
-function renderDiff(diffText) {
-  const lines = diffText.split('\n');
-  let html = '<table class="diff-table">';
-  for (const line of lines) {
-    if (line.startsWith('@@')) {
-      html += `<tr class="diff-hunk"><td colspan="3">${esc(line)}</td></tr>`;
-    } else if (line.startsWith('+')) {
-      html += `<tr class="diff-add"><td class="line-num"></td><td>${esc(line.substring(1))}</td></tr>`;
-    } else if (line.startsWith('-')) {
-      html += `<tr class="diff-del"><td class="line-num"></td><td>${esc(line.substring(1))}</td></tr>`;
-    } else {
-      html += `<tr><td class="line-num"></td><td>${esc(line.substring(1))}</td></tr>`;
+function renderSkills(groups){
+  const el=document.getElementById('skillContainer');
+  const total=groups.reduce((s,g)=>s+g.instances.length,0);
+  const dups=groups.filter(g=>g.instances.length>1).length;
+  document.getElementById('statsBar').innerHTML=`
+    <span>共 <span class="num">${groups.length}</span> 个技能</span>
+    <span>重复 <span class="num">${dups}</span> 组</span>
+    <span>实例 <span class="num">${total}</span></span>`;
+  if(!groups.length){el.innerHTML='<div class="empty"><div class="icon">📭</div><p>没有找到技能</p></div>';return;}
+  el.innerHTML=groups.map(g=>{
+    const isDup=g.instances.length>1;
+    const isOpen=expandedGroups.has(g.name)||isDup;
+    return `<div class="skill-group">
+      <div class="group-header" onclick="toggleGrp('${escA(g.name)}')">
+        <span class="group-chevron ${isOpen?'open':''}">▶</span>
+        <span class="group-name">${esc(g.name)}</span>
+        ${isDup?`<span class="group-badge">${g.instances.length}x</span>`:''}
+        <span class="group-meta">${g.instances.length===1?g.instances[0].root_dir:g.instances.map(i=>i.root_dir).join(', ')}</span>
+      </div>
+      <div class="group-body" style="display:${isOpen?'block':'none'}">
+        ${g.instances.map(sk=>`
+          <div class="skill-card">
+            <input type="checkbox" class="skill-checkbox" ${selected.has(sk.skill_md_path)?'checked':''} onchange="toggleSel('${escA(sk.skill_md_path)}',this.checked,${escJ(JSON.stringify(sk))})">
+            <div class="skill-info">
+              <div class="row"><span class="name">${esc(sk.name)}</span><span class="agent-tag">${esc(sk.root_dir)}</span></div>
+              ${sk.description?`<div class="desc">${esc(sk.description)}</div>`:''}
+              ${sk.tags?.length?`<div class="tags">${sk.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')}</div>`:''}
+            </div>
+            <div class="skill-actions">
+              <button class="action-btn" onclick="viewSkill('${escA(sk.skill_md_path)}')">📖</button>
+              <button class="action-btn delete" onclick="askDelete('${escA(sk.skill_dir)}','${esc(sk.name)}')">🗑️</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`}).join('');
+}
+
+function toggleGrp(n){expandedGroups.has(n)?expandedGroups.delete(n):expandedGroups.add(n);loadSkills();}
+
+// Selection
+function toggleSel(path,checked,json){
+  if(checked)selected.set(path,json);else selected.delete(path);
+  const n=selected.size;
+  document.getElementById('compareBtn').style.display=n>=2?'':'none';
+  document.getElementById('cmpN').textContent=n;
+  document.getElementById('deleteBtn').style.display=n>=1?'':'none';
+  document.getElementById('delN').textContent=n;
+}
+
+// Compare
+async function openCompare(){
+  const entries=[...selected.entries()].slice(0,2);
+  if(entries.length<2)return;
+  const[pA,sA]=entries[0],[pB,sB]=entries[1];
+  document.getElementById('compareOverlay').style.display='flex';
+  document.getElementById('compareTitle').textContent=`⚖️ ${sA.name}: ${sA.root_dir} ↔ ${sB.root_dir}`;
+  document.getElementById('compareBody').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try{
+    const r=await fetch(API+'/api/diff?path_a='+encodeURIComponent(pA)+'&path_b='+encodeURIComponent(pB));
+    const d=await r.json();
+    document.getElementById('compareStats').innerHTML=`
+      <div class="stat added"><span class="num">+${d.added}</span> 新增</div>
+      <div class="stat removed"><span class="num">-${d.removed}</span> 删除</div>
+      <div class="stat">A: ${d.a_lines}行 · B: ${d.b_lines}行</div>`;
+    const lines=d.unified_diff.split('\n');
+    let h='<table class="diff-table">';
+    for(const l of lines){
+      if(l.startsWith('@@'))h+=`<tr class="dh"><td class="ln"></td><td>${esc(l)}</td></tr>`;
+      else if(l.startsWith('+'))h+=`<tr class="da"><td class="ln"></td><td>${esc(l.slice(1))}</td></tr>`;
+      else if(l.startsWith('-'))h+=`<tr class="dd"><td class="ln"></td><td>${esc(l.slice(1))}</td></tr>`;
+      else h+=`<tr><td class="ln"></td><td>${esc(l.startsWith(' ')?l.slice(1):l)}</td></tr>`;
     }
-  }
-  html += '</table>';
-  document.getElementById('compareBody').innerHTML = html || '<div class="empty"><p>两个文件内容相同</p></div>';
+    h+='</table>';
+    document.getElementById('compareBody').innerHTML=h||'<div class="empty"><p>内容完全相同</p></div>';
+  }catch(e){document.getElementById('compareBody').innerHTML='<div class="empty"><p>'+esc(e.message)+'</p></div>';}
+}
+function closeCompare(){document.getElementById('compareOverlay').style.display='none';}
+
+// View
+async function viewSkill(path){
+  document.getElementById('viewerOverlay').style.display='flex';
+  document.getElementById('viewerTitle').textContent='📖 '+path.split('/').slice(-2).join('/');
+  try{
+    const r=await fetch(API+'/api/skill-content?path='+encodeURIComponent(path));
+    const d=await r.json();
+    document.getElementById('viewerContent').textContent=d.content;
+  }catch(e){document.getElementById('viewerContent').textContent='加载失败';}
+}
+function closeViewer(){document.getElementById('viewerOverlay').style.display='none';}
+
+// Delete
+function askDelete(path,name){
+  document.getElementById('confirmMsg').textContent=`确定要删除技能「${name}」吗？此操作不可撤销。`;
+  document.getElementById('confirmPath').textContent=path;
+  confirmCb=async()=>{
+    await fetch(API+'/api/skills/delete?path='+encodeURIComponent(path),{method:'DELETE'});
+    selected.clear();updateBtns();
+    loadSkills();discoverAll();
+  };
+  document.getElementById('confirmOverlay').style.display='flex';
+}
+function deleteSelected(){
+  const n=selected.size;
+  const paths=[...selected.keys()];
+  document.getElementById('confirmMsg').textContent=`确定要删除选中的 ${n} 个技能吗？`;
+  document.getElementById('confirmPath').textContent=paths.join('\n');
+  confirmCb=async()=>{
+    for(const p of paths)await fetch(API+'/api/skills/delete?path='+encodeURIComponent(p),{method:'DELETE'});
+    selected.clear();updateBtns();
+    loadSkills();discoverAll();
+  };
+  document.getElementById('confirmOverlay').style.display='flex';
+}
+function doConfirm(){closeConfirm();if(confirmCb)confirmCb();confirmCb=null;}
+function closeConfirm(){document.getElementById('confirmOverlay').style.display='none';}
+function updateBtns(){
+  const n=selected.size;
+  document.getElementById('compareBtn').style.display=n>=2?'':'none';
+  document.getElementById('cmpN').textContent=n;
+  document.getElementById('deleteBtn').style.display=n>=1?'':'none';
+  document.getElementById('delN').textContent=n;
 }
 
-function closeCompare() {
-  document.getElementById('compareOverlay').style.display = 'none';
+// ---- Scan roots ----
+async function loadScanRoots(){
+  try{
+    const r=await fetch(API+'/api/discover');
+    const all=await r.json();
+    // get user-added roots from config
+    const r2=await fetch(API+'/api/subscriptions');
+    const subs=await r2.json();
+    // Show user-added roots
+    // We need a separate endpoint... use the subscriptions endpoint to infer
+    // Actually let's just show what's in the discover labels that are not default
+    document.getElementById('scanRootList').innerHTML='<p style="font-size:12px;color:var(--text2)">自定义扫描路径暂未添加</p>';
+  }catch(e){console.error(e);}
 }
 
-// ---- View ----
-async function viewSkill(path) {
-  document.getElementById('viewerOverlay').style.display = 'flex';
-  document.getElementById('viewerTitle').textContent = '📖 ' + path.split('/').slice(-2).join('/');
-  try {
-    const resp = await fetch(`${API}/api/skills/${encodeURIComponent(path)}`);
-    const data = await resp.json();
-    document.getElementById('viewerContent').textContent = data.content;
-  } catch(e) {
-    document.getElementById('viewerContent').textContent = '加载失败';
-  }
+function renderPresets(){
+  // The default roots are hardcoded in backend; show them as reference
+  const el=document.getElementById('presetList');
+  // Show common agent directories as clickable chips
+  const presets=[
+    {label:'Hermes',path:'~/.hermes/skills'},
+    {label:'GitHub Copilot',path:'~/.copilot/skills'},
+    {label:'Claude Code',path:'~/.claude/skills'},
+    {label:'Cursor',path:'~/.cursor/skills'},
+    {label:'OpenCode',path:'~/.config/opencode/skills'},
+    {label:'Codex',path:'~/.codex/skills'},
+    {label:'Cline',path:'~/.agents/skills'},
+    {label:'Gemini CLI',path:'~/.gemini/skills'},
+    {label:'Windsurf',path:'~/.codeium/windsurf/skills'},
+    {label:'OpenClaw',path:'~/.openclaw/skills'},
+    {label:'Trae',path:'~/.trae/skills'},
+    {label:'CodeBuddy',path:'~/.codebuddy/skills'},
+    {label:'Droid',path:'~/.factory/skills'},
+    {label:'Amp',path:'~/.config/agents/skills'},
+    {label:'Kilo Code',path:'~/.kilocode/skills'},
+    {label:'Mux',path:'~/.mux/skills'},
+    {label:'Qoder',path:'~/.qoder/skills'},
+    {label:'Qwen Code',path:'~/.qwen/skills'},
+    {label:'Zencoder',path:'~/.zencoder/skills'},
+    {label:'Pi',path:'~/.pi/agent/skills'},
+  ];
+  el.innerHTML=presets.map(p=>`<span class="preset-chip" onclick="addScanRoot('${p.path}')" title="${p.path}">${p.label}</span>`).join('');
 }
 
-function closeViewer() {
-  document.getElementById('viewerOverlay').style.display = 'none';
-}
-
-// ---- Delete ----
-let pendingDelete = null;
-
-function deleteSkill(path, name, agent) {
-  pendingDelete = { path, single: true };
-  document.getElementById('confirmMsg').textContent = `确定要删除技能「${name}」（来源：${agent}）吗？\n路径: ${path}\n\n⚠️ 此操作不可撤销，将删除整个技能目录。`;
-  document.getElementById('confirmOverlay').style.display = 'flex';
-}
-
-function deleteSelected() {
-  const n = selectedSkills.size;
-  pendingDelete = { paths: [...selectedSkills.keys()], single: false };
-  document.getElementById('confirmMsg').textContent = `确定要删除选中的 ${n} 个技能吗？\n\n⚠️ 此操作不可撤销，将删除所有选中技能的整个目录。`;
-  document.getElementById('confirmOverlay').style.display = 'flex';
-}
-
-async function confirmDelete() {
-  closeConfirm();
-  try {
-    if (pendingDelete.single) {
-      const path = pendingDelete.path;
-      await fetch(`${API}/api/skills/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
-    } else {
-      for (const path of pendingDelete.paths) {
-        await fetch(`${API}/api/skills/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
-      }
-    }
-    selectedSkills.clear();
-    updateActionButtons();
-    await loadDirectories();
-    await loadSkills(document.getElementById('searchInput').value);
-  } catch(e) {
-    alert('删除失败: ' + e.message);
-  }
-  pendingDelete = null;
-}
-
-function closeConfirm() {
-  document.getElementById('confirmOverlay').style.display = 'none';
+async function addScanRoot(path){
+  const val=path||document.getElementById('newRootPath').value.trim();
+  if(!val)return;
+  await fetch(API+'/api/scan-roots?path='+encodeURIComponent(val),{method:'POST'});
+  document.getElementById('newRootPath').value='';
+  discoverAll();
 }
 
 // ---- Search ----
-function debounceSearch() {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => {
-    loadSkills(document.getElementById('searchInput').value);
-  }, 300);
+function onSearch(q){
+  searchQ=q.toLowerCase();
+  if(currentTab==='discover')renderDiscover();
+  else if(currentTab==='skills')loadSkills();
 }
 
 // ---- Utils ----
-function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function escJs(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function escA(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function escJ(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+function basename(p){return p.split('/').pop()||p.split('\\').pop();}
 
-// ---- Boot ----
-init();
+// Init
+discoverAll();
 </script>
 </body>
 </html>
