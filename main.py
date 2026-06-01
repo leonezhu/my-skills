@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Skill Manager — discover, subscribe, browse, compare, delete skills."""
+"""Skill Manager — discover roots, subscribe, browse, compare, delete skills."""
 
 import difflib
 import json
@@ -17,35 +17,34 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-app = FastAPI(title="Skill Manager", version="2.0.0")
+app = FastAPI(title="Skill Manager", version="3.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # ---------------------------------------------------------------------------
-# Known scan roots (places likely to contain SKILL.md)
+# Known scan roots — each is a parent directory that may contain SKILL.md
 # ---------------------------------------------------------------------------
 SCAN_ROOTS = [
-    "~/.hermes/skills",
-    "~/.copilot/skills",
-    "~/.claude/skills",
-    "~/.cursor/skills",
-    "~/.config/opencode/skills",
-    "~/.codex/skills",
-    "~/.agents/skills",
-    "~/.gemini/skills",
-    "~/.codeium/windsurf/skills",
-    "~/.openclaw/skills",
-    "~/.trae/skills",
-    "~/.codebuddy/skills",
-    "~/.factory/skills",
-    "~/.config/agents/skills",
-    "~/.kilocode/skills",
-    "~/.mux/skills",
-    "~/.qoder/skills",
-    "~/.qwen/skills",
-    "~/.zencoder/skills",
-    "~/.crush/skills",
-    "~/.pi/agent/skills",
-    "~/.kilocode/skills",
+    ("Hermes Agent",    "~/.hermes/skills"),
+    ("GitHub Copilot",  "~/.copilot/skills"),
+    ("Claude Code",     "~/.claude/skills"),
+    ("Cursor",          "~/.cursor/skills"),
+    ("OpenCode",        "~/.config/opencode/skills"),
+    ("Codex",           "~/.codex/skills"),
+    ("Cline",           "~/.agents/skills"),
+    ("Gemini CLI",      "~/.gemini/skills"),
+    ("Windsurf",        "~/.codeium/windsurf/skills"),
+    ("OpenClaw",        "~/.openclaw/skills"),
+    ("Trae",            "~/.trae/skills"),
+    ("CodeBuddy",       "~/.codebuddy/skills"),
+    ("Droid",           "~/.factory/skills"),
+    ("Amp",             "~/.config/agents/skills"),
+    ("Kilo Code",       "~/.kilocode/skills"),
+    ("Mux",             "~/.mux/skills"),
+    ("Qoder",           "~/.qoder/skills"),
+    ("Qwen Code",       "~/.qwen/skills"),
+    ("Zencoder",        "~/.zencoder/skills"),
+    ("Crush",           "~/.crush/skills"),
+    ("Pi",              "~/.pi/agent/skills"),
 ]
 
 USER_CONFIG_FILE = Path.home() / ".skill-manager" / "config.json"
@@ -53,22 +52,25 @@ USER_CONFIG_FILE = Path.home() / ".skill-manager" / "config.json"
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+class RootInfo(BaseModel):
+    label: str
+    path: str
+    expanded_path: str
+    exists: bool
+    skill_count: int
+    subscribed: bool
+    sample_skills: list[str]   # first few skill names
+
+
 class SkillInfo(BaseModel):
     name: str
-    root_dir: str          # the subscribed root directory label
-    skill_dir: str         # full path to skill directory
+    root_dir: str
+    skill_dir: str
     skill_md_path: str
     description: str
     tags: list[str]
     category: Optional[str]
     file_count: int
-
-
-class DiscoveredDir(BaseModel):
-    path: str
-    label: str
-    skill_count: int
-    subscribed: bool
 
 
 class DiffResult(BaseModel):
@@ -89,7 +91,7 @@ class DeleteResult(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Config
 # ---------------------------------------------------------------------------
 def exp(p: str) -> str:
     return os.path.expanduser(p)
@@ -101,7 +103,7 @@ def load_config() -> dict:
             return json.loads(USER_CONFIG_FILE.read_text())
         except Exception:
             pass
-    return {"scan_roots": [], "subscriptions": []}
+    return {"extra_roots": [], "subscriptions": []}
 
 
 def save_config(cfg: dict):
@@ -109,28 +111,52 @@ def save_config(cfg: dict):
     USER_CONFIG_FILE.write_text(json.dumps(cfg, indent=2, ensure_ascii=False))
 
 
-def get_all_roots() -> list[str]:
-    """Combine default + user-configured scan roots."""
+def get_all_roots() -> list[tuple[str, str]]:
+    """Return (label, expanded_path) for all scan roots."""
     cfg = load_config()
-    roots = list(SCAN_ROOTS) + cfg.get("scan_roots", [])
-    seen = set()
-    result = []
-    for r in roots:
-        e = exp(r)
+    seen: set[str] = set()
+    result: list[tuple[str, str]] = []
+    for label, path in SCAN_ROOTS:
+        e = exp(path)
         if e not in seen:
             seen.add(e)
-            result.append(e)
+            result.append((label, e))
+    for item in cfg.get("extra_roots", []):
+        label = item.get("label", "")
+        path = exp(item.get("path", ""))
+        if path not in seen:
+            seen.add(path)
+            result.append((label, path))
     return result
 
 
-def get_subscriptions() -> list[str]:
+def get_subscribed_roots() -> list[str]:
+    """Subscribed root expanded paths."""
     return load_config().get("subscriptions", [])
 
 
-def set_subscriptions(paths: list[str]):
+def set_subscribed_roots(paths: list[str]):
     cfg = load_config()
     cfg["subscriptions"] = paths
     save_config(cfg)
+
+
+# ---------------------------------------------------------------------------
+# Scan helpers
+# ---------------------------------------------------------------------------
+def discover_skill_dirs(root: str, max_depth: int = 5) -> list[str]:
+    """Find all directories containing SKILL.md under root."""
+    found = []
+    if not os.path.isdir(root):
+        return found
+    for dirpath, dirnames, filenames in os.walk(root):
+        depth = dirpath[len(root):].count(os.sep)
+        if depth > max_depth:
+            dirnames.clear()
+            continue
+        if "SKILL.md" in filenames:
+            found.append(dirpath)
+    return sorted(found)
 
 
 def parse_frontmatter(content: str) -> dict:
@@ -149,21 +175,6 @@ def parse_frontmatter(content: str) -> dict:
     return meta
 
 
-def discover_skill_dirs(root: str, max_depth: int = 4) -> list[str]:
-    """Find all directories containing SKILL.md under root."""
-    found = []
-    if not os.path.isdir(root):
-        return found
-    for dirpath, dirnames, filenames in os.walk(root):
-        depth = dirpath[len(root):].count(os.sep)
-        if depth > max_depth:
-            dirnames.clear()
-            continue
-        if "SKILL.md" in filenames:
-            found.append(dirpath)
-    return sorted(found)
-
-
 def scan_skill(skill_dir: str, root_label: str) -> SkillInfo:
     skill_md_path = os.path.join(skill_dir, "SKILL.md")
     try:
@@ -172,9 +183,11 @@ def scan_skill(skill_dir: str, root_label: str) -> SkillInfo:
     except Exception:
         content = ""
     meta = parse_frontmatter(content)
-    file_count = 0
-    for _, _, files in os.walk(skill_dir):
-        file_count += sum(1 for f in files if not f.startswith(".") and not f.endswith(".pyc"))
+    file_count = sum(
+        1 for _, _, files in os.walk(skill_dir)
+        for f in files
+        if not f.startswith(".") and not f.endswith(".pyc")
+    )
     return SkillInfo(
         name=os.path.basename(skill_dir),
         root_dir=root_label,
@@ -195,106 +208,99 @@ def read_file_content(path: str) -> str:
         return f.read()
 
 
-# ---------------------------------------------------------------------------
-# API
-# ---------------------------------------------------------------------------
-@app.get("/api/discover")
-async def discover():
-    """Scan all roots, return directories found with SKILL.md, grouped by root."""
-    roots = get_all_roots()
-    subs = set(get_subscriptions())
-    results = []
-    seen_dirs = set()
-    for root in roots:
-        label = root.replace(os.path.expanduser("~"), "~")
-        dirs = discover_skill_dirs(root)
-        for d in dirs:
-            if d not in seen_dirs:
-                seen_dirs.add(d)
-                results.append(DiscoveredDir(
-                    path=d,
-                    label=label,
-                    skill_count=1,  # each dir is one skill
-                    subscribed=d in subs,
-                ))
-    return results
-
-
-@app.get("/api/subscriptions")
-async def get_subs():
-    """Return currently subscribed directories with their skills."""
-    subs = get_subscriptions()
-    roots = get_all_roots()
-    # Map each subscribed path back to its root label
-    root_label_map = {}
-    for root in roots:
-        for d in discover_skill_dirs(root):
-            if d in subs:
-                label = root.replace(os.path.expanduser("~"), "~")
-                root_label_map[d] = label
+def get_all_skills_from_roots(root_paths: list[str]) -> list[SkillInfo]:
+    """Scan subscribed roots and return all skills."""
+    root_map = {exp(p): label for label, p in get_all_roots()}
     skills = []
-    for d in subs:
-        if os.path.isdir(d):
-            label = root_label_map.get(d, os.path.dirname(d))
-            skills.append(scan_skill(d, label))
+    for rp in root_paths:
+        label = root_map.get(rp, "~")
+        for sd in discover_skill_dirs(rp):
+            skills.append(scan_skill(sd, label))
     return skills
 
 
+# ---------------------------------------------------------------------------
+# API — Discover (root-level)
+# ---------------------------------------------------------------------------
+@app.get("/api/discover")
+async def discover():
+    """Return all known roots with skill counts and subscription status."""
+    roots = get_all_roots()
+    subs = set(get_subscribed_roots())
+    results = []
+    for label, expanded in roots:
+        dirs = discover_skill_dirs(expanded)
+        names = [os.path.basename(d) for d in dirs[:8]]
+        results.append(RootInfo(
+            label=label,
+            path=expanded.replace(os.path.expanduser("~"), "~"),
+            expanded_path=expanded,
+            exists=os.path.isdir(expanded),
+            skill_count=len(dirs),
+            subscribed=expanded in subs,
+            sample_skills=names,
+        ))
+    return results
+
+
+# ---------------------------------------------------------------------------
+# API — Subscriptions (root-level)
+# ---------------------------------------------------------------------------
 @app.post("/api/subscriptions")
 async def subscribe(path: str):
-    subs = get_subscriptions()
-    p = exp(path) if not os.path.isabs(path) else path
-    if p not in subs:
-        subs.append(p)
-        set_subscriptions(subs)
+    subs = set(get_subscribed_roots())
+    p = exp(path)
+    subs.add(p)
+    set_subscribed_roots(sorted(subs))
     return {"success": True}
 
 
 @app.delete("/api/subscriptions")
 async def unsubscribe(path: str):
-    subs = get_subscriptions()
-    p = exp(path) if not os.path.isabs(path) else path
-    subs = [s for s in subs if s != p]
-    set_subscriptions(subs)
+    subs = set(get_subscribed_roots())
+    p = exp(path)
+    subs.discard(p)
+    set_subscribed_roots(sorted(subs))
     return {"success": True}
 
 
-@app.post("/api/subscriptions/batch")
-async def batch_subscribe(paths: list[str]):
-    subs = set(get_subscriptions())
-    for p in paths:
-        e = exp(p) if not os.path.isabs(p) else p
-        subs.add(e)
-    set_subscriptions(sorted(subs))
-    return {"success": True, "count": len(subs)}
+@app.get("/api/subscriptions")
+async def list_subs():
+    """Return subscribed roots and their skills."""
+    subs = get_subscribed_roots()
+    root_map = {exp(p): label for label, p in get_all_roots()}
+    result = []
+    for rp in subs:
+        label = root_map.get(rp, rp.replace(os.path.expanduser("~"), "~"))
+        dirs = discover_skill_dirs(rp)
+        result.append({
+            "label": label,
+            "path": rp.replace(os.path.expanduser("~"), "~"),
+            "skills": [scan_skill(d, label).model_dump() for d in dirs],
+        })
+    return result
 
 
+# ---------------------------------------------------------------------------
+# API — Skills (from subscribed roots)
+# ---------------------------------------------------------------------------
 @app.get("/api/skills")
-async def list_skills(search: Optional[str] = None):
-    skills = []
-    subs = get_subscriptions()
-    roots = get_all_roots()
-    root_label_map = {}
-    for root in roots:
-        for d in discover_skill_dirs(root):
-            if d in subs:
-                label = root.replace(os.path.expanduser("~"), "~")
-                root_label_map[d] = label
-    for d in subs:
-        if os.path.isdir(d):
-            label = root_label_map.get(d, "~")
-            skills.append(scan_skill(d, label))
+async def list_skills(search: Optional[str] = None, root: Optional[str] = None):
+    subs = get_subscribed_roots()
+    if root:
+        subs = [rp for rp in subs if rp.replace(os.path.expanduser("~"), "~") == root
+                or rp == exp(root)]
+    skills = get_all_skills_from_roots(subs)
     if search:
         s = search.lower()
         skills = [sk for sk in skills
                   if s in sk.name.lower() or s in sk.description.lower()
                   or any(s in t.lower() for t in sk.tags)]
-    # Group by name
-    groups = defaultdict(list)
+    groups: dict[str, list[SkillInfo]] = defaultdict(list)
     for sk in skills:
         groups[sk.name].append(sk)
     result = []
-    for name in sorted(groups.keys(), key=lambda n: (-len(groups[n]), n)):
+    for name in sorted(groups, key=lambda n: (-len(groups[n]), n)):
         result.append({"name": name, "instances": [s.model_dump() for s in groups[name]]})
     return result
 
@@ -319,23 +325,20 @@ async def diff_skills(path_a: str, path_b: str):
         if op == "insert": added += b2 - b1
         elif op == "replace": added += b2 - b1; removed += a2 - a1
         elif op == "delete": removed += a2 - a1
-    def skill_info(p):
-        subs = get_subscriptions()
-        roots = get_all_roots()
-        for root in roots:
-            for sk_dir in discover_skill_dirs(root):
-                if sk_dir == p:
-                    sk = scan_skill(sk_dir, root.replace(os.path.expanduser("~"), "~"))
+
+    def info(p):
+        root_map = {exp(rp2): lab for lab, rp2 in get_all_roots()}
+        for rp in get_subscribed_roots():
+            for sd in discover_skill_dirs(rp):
+                if sd == p:
+                    sk = scan_skill(sd, root_map.get(rp, "~"))
                     return {"name": sk.name, "root_dir": sk.root_dir, "skill_dir": sk.skill_dir}
         return {"name": os.path.basename(p), "root_dir": "?", "skill_dir": p}
+
     return DiffResult(
-        skill_a=skill_info(path_a),
-        skill_b=skill_info(path_b),
-        unified_diff=diff_text,
-        a_lines=len(lines_a),
-        b_lines=len(lines_b),
-        added=added,
-        removed=removed,
+        skill_a=info(path_a), skill_b=info(path_b),
+        unified_diff=diff_text, a_lines=len(lines_a), b_lines=len(lines_b),
+        added=added, removed=removed,
     )
 
 
@@ -346,31 +349,36 @@ async def delete_skill(path: str):
         raise HTTPException(404, f"Not found: {path}")
     name = os.path.basename(p)
     shutil.rmtree(p)
-    # Also remove from subscriptions
-    subs = [s for s in get_subscriptions() if s != p]
-    set_subscriptions(subs)
     return DeleteResult(success=True, skill_name=name, deleted_path=p, message=f"Deleted '{name}'")
 
 
-@app.post("/api/scan-roots")
-async def add_scan_root(path: str):
+# ---------------------------------------------------------------------------
+# API — Extra roots (user-customizable scan paths)
+# ---------------------------------------------------------------------------
+@app.post("/api/extra-roots")
+async def add_extra_root(label: str, path: str):
     cfg = load_config()
     e = exp(path)
-    roots = cfg.get("scan_roots", [])
-    if e not in roots:
-        roots.append(path)
-        cfg["scan_roots"] = roots
+    existing = cfg.get("extra_roots", [])
+    if not any(exp(r.get("path", "")) == e for r in existing):
+        existing.append({"label": label, "path": path})
+        cfg["extra_roots"] = existing
         save_config(cfg)
     return {"success": True}
 
 
-@app.delete("/api/scan-roots")
-async def remove_scan_root(path: str):
+@app.delete("/api/extra-roots")
+async def remove_extra_root(path: str):
     cfg = load_config()
     e = exp(path)
-    cfg["scan_roots"] = [r for r in cfg.get("scan_roots", []) if exp(r) != e]
+    cfg["extra_roots"] = [r for r in cfg.get("extra_roots", []) if exp(r.get("path", "")) != e]
     save_config(cfg)
     return {"success": True}
+
+
+@app.get("/api/extra-roots")
+async def list_extra_roots():
+    return load_config().get("extra_roots", [])
 
 
 # ---------------------------------------------------------------------------
@@ -379,14 +387,12 @@ async def remove_scan_root(path: str):
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 os.makedirs(STATIC_DIR, exist_ok=True)
 
-
 @app.get("/")
 async def index():
     html_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.isfile(html_path):
         return HTMLResponse(content=open(html_path).read())
-    return HTMLResponse(content="<h1>Skill Manager</h1><p>Put index.html in static/</p>")
-
+    return HTMLResponse(content="<h1>Skill Manager</h1>")
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 

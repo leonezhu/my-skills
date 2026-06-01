@@ -1,520 +1,393 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Skill Manager</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--orange:#d29922;--purple:#bc8cff;--card:#1c2128}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column}
-a{color:var(--accent)}button{cursor:pointer;font-family:inherit}
-input,select{font-family:inherit}
-
-/* Top nav */
-.topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
-.topbar h1{font-size:16px;font-weight:700;white-space:nowrap}
-.topbar .sep{width:1px;height:20px;background:var(--border)}
-.top-tabs{display:flex;gap:4px}
-.top-tabs button{background:none;border:1px solid transparent;color:var(--text2);padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500}
-.top-tabs button:hover{background:var(--card)}
-.top-tabs button.active{color:var(--accent);border-color:var(--accent);background:rgba(88,166,255,.08)}
-.topbar .spacer{flex:1}
-.search-box{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:6px;font-size:13px;width:200px}
-.search-box:focus{outline:none;border-color:var(--accent)}
-
-/* Main content */
-.content{flex:1;overflow:hidden;display:flex;flex-direction:column}
-.panel{flex:1;overflow-y:auto;padding:20px 24px;display:none}
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--text2:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--hover:#1f2937}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:18px;font-weight:600}
+.header .stats{color:var(--text2);font-size:13px}
+.tabs{display:flex;padding:0 24px;gap:0;border-bottom:1px solid var(--border)}
+.tab{padding:10px 16px;font-size:13px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--text);background:var(--hover)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+.content{padding:24px}
+.panel{display:none}
 .panel.active{display:block}
 
-/* ---- Discover panel ---- */
-.discover-header{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
-.discover-header .info{font-size:13px;color:var(--text2)}
-.btn{border:1px solid var(--border);background:var(--surface);color:var(--text);padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
-.btn:hover{background:var(--card);border-color:var(--text2)}
-.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn.primary:hover{opacity:.9}
-.btn.danger{color:var(--red);border-color:var(--red)}
-.btn.danger:hover{background:rgba(248,81,73,.1)}
-.btn.sm{padding:4px 10px;font-size:12px}
+/* Discover root cards */
+.roots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.root-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;transition:all .15s;cursor:pointer;position:relative}
+.root-card:hover{border-color:var(--accent)}
+.root-card.subscribed{border-color:var(--green)}
+.root-card.missing{opacity:.5}
+.root-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.root-label{font-size:14px;font-weight:600;color:var(--text)}
+.root-path{font-size:11px;color:var(--text2);font-family:'SF Mono',monospace;margin-bottom:10px}
+.root-count{font-size:12px;color:var(--accent);font-weight:500}
+.sub-btn{padding:4px 12px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s}
+.sub-btn:hover{border-color:var(--green);color:var(--green)}
+.sub-btn.active{background:rgba(63,185,80,.15);border-color:var(--green);color:var(--green)}
+.sample-skills{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.sample-tag{font-size:11px;padding:2px 6px;background:var(--bg);border-radius:3px;color:var(--text2)}
+.not-exist-badge{font-size:11px;color:var(--yellow);margin-left:8px}
 
-/* Directory cards (discover) */
-.dir-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
-.dir-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .15s}
-.dir-card:hover{border-color:var(--text2)}
-.dir-card.subscribed{border-color:var(--green)}
-.dir-card-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border)}
-.dir-card-head .toggle{width:20px;height:20px;accent-color:var(--green);cursor:pointer}
-.dir-card-head .icon{font-size:18px}
-.dir-card-head .name{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dir-card-head .root{font-size:11px;color:var(--text2);background:var(--card);padding:2px 8px;border-radius:4px;white-space:nowrap}
-.dir-card-body{padding:10px 14px;font-size:13px;color:var(--text2);max-height:160px;overflow:hidden}
-.dir-card-body .skill-name{color:var(--text);font-weight:500}
-.dir-card-body .path{font-size:11px;font-family:'SF Mono',Monaco,monospace;opacity:.5;margin-top:2px}
+/* Subscribed skills */
+.skills-group{margin-bottom:24px}
+.skills-group-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.skills-group-header h3{font-size:15px;color:var(--accent)}
+.skills-group-header .count{font-size:12px;color:var(--text2)}
+.search-bar{margin-bottom:20px;display:flex;gap:8px}
+.search-bar input{flex:1;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none}
+.search-bar input:focus{border-color:var(--accent)}
+.search-bar select{padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none}
 
-/* ---- Skills panel ---- */
-.toolbar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
-.toolbar .spacer{flex:1}
-.stats{display:flex;gap:10px;font-size:12px;color:var(--text2)}
-.stats .num{color:var(--accent);font-weight:600}
-.skill-group{margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.group-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none}
-.group-header:hover{background:var(--card)}
-.group-name{font-size:14px;font-weight:600;color:var(--accent)}
-.group-meta{font-size:12px;color:var(--text2)}
-.group-badge{background:var(--orange);color:#000;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
-.group-chevron{margin-left:auto;color:var(--text2);transition:transform .2s;font-size:12px}
-.group-chevron.open{transform:rotate(90deg)}
-.group-body{border-top:1px solid var(--border)}
-.skill-card{display:flex;align-items:flex-start;padding:12px 16px;gap:12px;border-bottom:1px solid var(--border)}
-.skill-card:last-child{border-bottom:none}
-.skill-checkbox{margin-top:2px;width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
-.skill-info{flex:1;min-width:0}
-.skill-info .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.skill-info .name{font-size:13px;font-weight:600}
-.skill-info .agent-tag{font-size:11px;background:var(--card);border:1px solid var(--border);color:var(--text2);padding:1px 7px;border-radius:4px}
-.skill-info .desc{font-size:12px;color:var(--text2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:500px}
-.skill-info .tags{margin-top:4px;display:flex;gap:4px;flex-wrap:wrap}
-.skill-info .tag{font-size:11px;background:rgba(188,140,255,.12);color:var(--purple);padding:1px 7px;border-radius:4px}
-.skill-info .path-text{font-size:11px;color:var(--text2);font-family:'SF Mono',Monaco,monospace;opacity:.5;margin-top:3px}
-.skill-actions{display:flex;gap:4px;flex-shrink:0;align-self:center}
-.action-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:3px 8px;border-radius:5px;font-size:12px}
-.action-btn:hover{color:var(--text);border-color:var(--text2)}
-.action-btn.delete:hover{color:var(--red);border-color:var(--red);background:rgba(248,81,73,.08)}
+.skill-row{display:flex;align-items:center;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;transition:all .15s;cursor:pointer}
+.skill-row:hover{border-color:var(--accent)}
+.skill-row.selected{border-color:var(--accent);background:rgba(88,166,255,.08)}
+.skill-name{font-weight:600;font-size:13px;min-width:160px}
+.skill-desc{font-size:12px;color:var(--text2);flex:1;margin-left:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skill-meta{font-size:11px;color:var(--text2);margin-left:12px;white-space:nowrap}
+.dup-badge{font-size:10px;padding:1px 6px;background:rgba(210,153,34,.15);color:var(--yellow);border-radius:3px;margin-left:8px}
 
-/* ---- Scan roots panel ---- */
-.scan-root-list{margin-top:12px}
-.scan-root-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px}
-.scan-root-item .path{flex:1;font-family:'SF Mono',Monaco,monospace;font-size:12px;color:var(--text2)}
-.scan-root-item .remove{background:none;border:none;color:var(--text2);font-size:16px;padding:2px 6px;border-radius:4px}
-.scan-root-item .remove:hover{color:var(--red);background:rgba(248,81,73,.1)}
-.add-root-row{display:flex;gap:8px;margin-top:12px}
-.add-root-row input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px}
-.add-root-row input:focus{outline:none;border-color:var(--accent)}
-.preset-list{margin-top:16px}
-.preset-chip{display:inline-block;background:var(--card);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:12px;margin:3px;cursor:pointer;transition:all .15s}
-.preset-chip:hover{border-color:var(--accent);color:var(--accent)}
-.preset-chip.added{border-color:var(--green);color:var(--green);background:rgba(63,185,80,.08);cursor:default}
+/* Diff modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:12px;width:90vw;max-width:900px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-header h3{font-size:14px}
+.modal-close{background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer}
+.modal-body{flex:1;overflow:auto;padding:16px 20px}
+.diff-stats{display:flex;gap:16px;margin-bottom:12px;font-size:12px}
+.diff-stats .added{color:var(--green)}
+.diff-stats .removed{color:var(--red)}
+.diff-content{font-family:'SF Mono',Consolas,monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all}
+.diff-content .line-add{color:var(--green);background:rgba(63,185,80,.1)}
+.diff-content .line-del{color:var(--red);background:rgba(248,81,73,.1)}
+.diff-content .line-hdr{color:var(--text2)}
 
-/* ---- Modals ---- */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:90vw;max-width:1100px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.4)}
-.modal.sm{max-width:400px}
-.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
-.modal-header h3{font-size:15px}
-.modal-close{background:none;border:none;color:var(--text2);font-size:22px;padding:2px 6px;border-radius:6px}
-.modal-close:hover{background:var(--card);color:var(--text)}
-.modal-body{flex:1;overflow:auto}
-.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--border)}
+/* Content modal */
+.content-modal{font-family:'SF Mono',Consolas,monospace;font-size:12px;line-height:1.8;white-space:pre-wrap}
+.action-bar{display:flex;gap:8px;margin-bottom:16px}
+.action-btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:12px;cursor:pointer;transition:all .15s}
+.action-btn:hover{border-color:var(--accent);color:var(--accent)}
+.action-btn.danger:hover{border-color:var(--red);color:var(--red)}
+.action-btn:disabled{opacity:.4;cursor:not-allowed}
 
-/* Diff */
-.compare-stats{display:flex;gap:14px;padding:10px 20px;font-size:13px;border-bottom:1px solid var(--border);background:var(--card)}
-.compare-stats .stat{display:flex;align-items:center;gap:5px}
-.compare-stats .num{font-weight:600}
-.compare-stats .added .num{color:var(--green)}
-.compare-stats .removed .num{color:var(--red)}
-.compare-stats .changed .num{color:var(--orange)}
-.diff-table{width:100%;font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:12px;line-height:1.55;border-collapse:collapse}
-.diff-table td{padding:0 14px;white-space:pre-wrap;word-break:break-all;vertical-align:top;position:relative;padding-left:28px}
-.diff-table .ln{width:36px;text-align:right;color:var(--text2);opacity:.4;user-select:none;padding-left:14px}
-.diff-table tr.da{background:rgba(63,185,80,.1)}
-.diff-table tr.dd{background:rgba(248,81,73,.1)}
-.diff-table tr.dh{background:rgba(88,166,255,.06);color:var(--accent)}
-
-/* Confirm */
-.confirm-body{padding:20px}
-.confirm-body h4{font-size:15px;color:var(--red);margin-bottom:8px}
-.confirm-body p{font-size:13px;color:var(--text2);line-height:1.5}
-.confirm-body .path{font-family:'SF Mono',Monaco;font-size:11px;background:var(--bg);padding:6px 10px;border-radius:6px;margin-top:8px;word-break:break-all}
-
-/* Loading / Empty */
-.loading{text-align:center;padding:60px;color:var(--text2)}
-.spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;padding:60px;color:var(--text2)}
-.empty .icon{font-size:42px;margin-bottom:10px;opacity:.35}
-
-/* Scrollbar */
-::-webkit-scrollbar{width:7px;height:7px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
-::-webkit-scrollbar-thumb:hover{background:var(--text2)}
-@media(max-width:768px){.search-box{width:140px}.dir-grid{grid-template-columns:1fr}}
+/* Settings */
+.settings-section{margin-bottom:24px}
+.settings-section h3{font-size:14px;color:var(--accent);margin-bottom:12px}
+.settings-row{display:flex;gap:8px;margin-bottom:8px}
+.settings-row input{flex:1;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none}
+.settings-row input:focus{border-color:var(--accent)}
+.settings-row button{padding:8px 16px;border-radius:6px;border:1px solid var(--accent);background:rgba(88,166,255,.1);color:var(--accent);font-size:13px;cursor:pointer}
+.extra-root-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:13px}
+.extra-root-item .del-btn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px}
+.extra-root-item .del-btn:hover{color:var(--red)}
+.empty{text-align:center;padding:40px;color:var(--text2);font-size:14px}
 </style>
 </head>
 <body>
 
-<!-- Top bar -->
-<div class="topbar">
-  <h1>🗂️ Skill Manager</h1>
-  <div class="sep"></div>
-  <div class="top-tabs">
-    <button class="active" onclick="switchTab('discover',this)">🔍 发现</button>
-    <button onclick="switchTab('skills',this)">📦 已订阅</button>
-    <button onclick="switchTab('roots',this)">⚙️ 扫描路径</button>
-  </div>
-  <div class="spacer"></div>
-  <input class="search-box" id="searchInput" placeholder="搜索..." oninput="onSearch(this.value)">
+<div class="header">
+  <h1>⚙️ Skill Manager</h1>
+  <span class="stats" id="stats"></span>
 </div>
 
-<!-- Content -->
+<div class="tabs">
+  <div class="tab active" data-tab="discover">🔍 发现</div>
+  <div class="tab" data-tab="skills">📦 已订阅</div>
+  <div class="tab" data-tab="settings">⚙️ 设置</div>
+</div>
+
 <div class="content">
-
-  <!-- Discover -->
+  <!-- Discover panel -->
   <div class="panel active" id="panel-discover">
-    <div class="discover-header">
-      <span class="info" id="discoverInfo">扫描中...</span>
-      <button class="btn primary sm" onclick="discoverAll()">🔄 重新扫描</button>
-      <button class="btn sm" onclick="subscribeAllVisible()">✅ 订阅全部</button>
-    </div>
-    <div class="dir-grid" id="discoverGrid"><div class="loading"><div class="spinner"></div><br>扫描中...</div></div>
+    <div class="roots-grid" id="roots-grid"></div>
   </div>
 
-  <!-- Subscribed skills -->
+  <!-- Skills panel -->
   <div class="panel" id="panel-skills">
-    <div class="toolbar">
-      <button class="btn sm" id="compareBtn" onclick="openCompare()" style="display:none">⚖️ 对比 (<span id="cmpN">0</span>)</button>
-      <button class="btn sm danger" id="deleteBtn" onclick="deleteSelected()" style="display:none">🗑️ 删除 (<span id="delN">0</span>)</button>
-      <div class="spacer"></div>
-      <div class="stats" id="statsBar"></div>
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="搜索 skill...">
+      <select id="root-filter"><option value="">全部根目录</option></select>
     </div>
-    <div id="skillContainer"><div class="empty"><div class="icon">📭</div><p>还没有订阅任何技能目录<br>去「发现」页订阅吧</p></div></div>
+    <div class="action-bar">
+      <button class="action-btn" id="btn-compare" disabled>🔍 比较选中</button>
+      <button class="action-btn" id="btn-view" disabled>📖 查看内容</button>
+      <button class="action-btn danger" id="btn-delete" disabled>🗑️ 删除</button>
+    </div>
+    <div id="skills-list"></div>
   </div>
 
-  <!-- Scan roots -->
-  <div class="panel" id="panel-roots">
-    <h3 style="font-size:15px;margin-bottom:4px">自定义扫描路径</h3>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:8px">添加额外的目录来发现 SKILL.md 文件</p>
-    <div class="add-root-row">
-      <input id="newRootPath" placeholder="~/path/to/scan">
-      <button class="btn sm primary" onclick="addScanRoot()">添加</button>
+  <!-- Settings panel -->
+  <div class="panel" id="panel-settings">
+    <div class="settings-section">
+      <h3>➕ 自定义扫描路径</h3>
+      <div class="settings-row">
+        <input type="text" id="extra-label" placeholder="标签名称（如 My Project）">
+        <input type="text" id="extra-path" placeholder="路径（如 ~/projects/my-agent/skills）">
+        <button onclick="addExtraRoot()">添加</button>
+      </div>
+      <div id="extra-roots-list"></div>
     </div>
-    <div class="scan-root-list" id="scanRootList"></div>
-    <h3 style="font-size:15px;margin:24px 0 8px">预设路径（点击添加）</h3>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:8px">灰色 = 已在默认列表中，点击无效</p>
-    <div class="preset-list" id="presetList"></div>
   </div>
 </div>
 
-<!-- Compare modal -->
-<div class="overlay" id="compareOverlay" style="display:none" onclick="if(event.target===this)closeCompare()">
+<!-- Diff modal -->
+<div class="modal-overlay" id="diff-modal">
   <div class="modal">
-    <div class="modal-header"><h3 id="compareTitle">⚖️ 对比</h3><button class="modal-close" onclick="closeCompare()">&times;</button></div>
-    <div class="compare-stats" id="compareStats"></div>
-    <div class="modal-body" id="compareBody"><div class="loading"><div class="spinner"></div></div></div>
-  </div>
-</div>
-
-<!-- Viewer modal -->
-<div class="overlay" id="viewerOverlay" style="display:none" onclick="if(event.target===this)closeViewer()">
-  <div class="modal" style="max-width:800px">
-    <div class="modal-header"><h3 id="viewerTitle">📖</h3><button class="modal-close" onclick="closeViewer()">&times;</button></div>
-    <div class="modal-body"><pre id="viewerContent" style="font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all;padding:16px"></pre></div>
-  </div>
-</div>
-
-<!-- Confirm modal -->
-<div class="overlay" id="confirmOverlay" style="display:none">
-  <div class="modal sm">
-    <div class="confirm-body">
-      <h4>⚠️ 确认删除</h4>
-      <p id="confirmMsg"></p>
-      <div class="path" id="confirmPath"></div>
+    <div class="modal-header">
+      <h3 id="diff-title">比较差异</h3>
+      <button class="modal-close" onclick="closeModal('diff-modal')">&times;</button>
     </div>
-    <div class="modal-footer">
-      <button class="btn sm" onclick="closeConfirm()">取消</button>
-      <button class="btn sm danger" id="confirmBtn" onclick="doConfirm()">删除</button>
+    <div class="modal-body">
+      <div class="diff-stats" id="diff-stats"></div>
+      <div class="diff-content" id="diff-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Content modal -->
+<div class="modal-overlay" id="content-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="content-title">Skill 内容</h3>
+      <button class="modal-close" onclick="closeModal('content-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="content-modal" id="content-body"></div>
     </div>
   </div>
 </div>
 
 <script>
-const API='';
-let discoveredDirs=[];
-let currentTab='discover';
-let selected=new Map();
-let expandedGroups=new Set();
-let searchQ='';
-let confirmCb=null;
-const DEFAULT_ROOTS=EXPAND_DEFAULTS;
+const API = '';
+let allSkills = [];
+let selectedPaths = new Set();
+let currentRoot = '';
 
-function EXPAND_DEFAULTS(){return["~/.hermes/skills","~/.copilot/skills","~/.claude/skills","~/.cursor/skills","~/.config/opencode/skills","~/.codex/skills","~/.agents/skills","~/.gemini/skills","~/.codeium/windsurf/skills","~/.openclaw/skills","~/.trae/skills","~/.codebuddy/skills","~/.factory/skills","~/.config/agents/skills","~/.kilocode/skills","~/.mux/skills","~/.qoder/skills","~/.qwen/skills","~/.zencoder/skills","~/.crush/skills","~/.pi/agent/skills"]}
-
-// ---- Tabs ----
-function switchTab(tab,btn){
-  currentTab=tab;
-  document.querySelectorAll('.top-tabs button').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+tab).classList.add('active');
-  if(tab==='discover')discoverAll();
-  if(tab==='skills')loadSkills();
-  if(tab==='roots'){loadScanRoots();renderPresets();}
-}
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+    if (tab.dataset.tab === 'skills') loadSkills();
+    if (tab.dataset.tab === 'discover') loadDiscover();
+    if (tab.dataset.tab === 'settings') loadExtraRoots();
+  });
+});
 
 // ---- Discover ----
-async function discoverAll(){
-  const el=document.getElementById('discoverGrid');
-  el.innerHTML='<div class="loading"><div class="spinner"></div><br>扫描中...</div>';
-  try{
-    const r=await fetch(API+'/api/discover');
-    discoveredDirs=await r.json();
-    renderDiscover();
-  }catch(e){
-    el.innerHTML='<div class="empty"><div class="icon">🔌</div><p>无法连接后端</p></div>';
-  }
-}
-
-function renderDiscover(){
-  const subs=new Set();
-  // fetch subscriptions for quick check
-  fetch(API+'/api/subscriptions').then(r=>r.json()).then(skills=>{
-    skills.forEach(s=>subs.add(s.skill_dir));
-    renderDiscoverWith(subs);
-  }).catch(()=>renderDiscoverWith(subs));
-}
-
-function renderDiscoverWith(subs){
-  const el=document.getElementById('discoverGrid');
-  document.getElementById('discoverInfo').textContent=`发现 ${discoveredDirs.length} 个技能目录`;
-  const filtered=searchQ?discoveredDirs.filter(d=>d.path.toLowerCase().includes(searchQ)||d.label.toLowerCase().includes(searchQ)):discoveredDirs;
-  if(!filtered.length){el.innerHTML='<div class="empty"><p>没有找到匹配的目录</p></div>';return;}
-  el.innerHTML=filtered.map(d=>{
-    const isSub=subs.has(d.path);
-    return `<div class="dir-card ${isSub?'subscribed':''}">
-      <div class="dir-card-head">
-        <input type="checkbox" class="toggle" ${isSub?'checked':''} onchange="toggleSub('${escA(d.path)}',this.checked)">
-        <span class="icon">${isSub?'✅':'📄'}</span>
-        <span class="name">${esc(basename(d.path))}</span>
-        <span class="root">${esc(d.label)}</span>
+async function loadDiscover() {
+  const roots = await fetch(`${API}/api/discover`).then(r => r.json());
+  const grid = document.getElementById('roots-grid');
+  grid.innerHTML = '';
+  const existCount = roots.filter(r => r.exists).length;
+  const totalSkills = roots.reduce((s, r) => s + r.skill_count, 0);
+  const subCount = roots.filter(r => r.subscribed).length;
+  document.getElementById('stats').textContent = `${existCount} 个 Agent · ${totalSkills} Skills · ${subCount} 已订阅`;
+  roots.sort((a, b) => b.skill_count - a.skill_count);
+  roots.forEach(r => {
+    const card = document.createElement('div');
+    card.className = `root-card${r.subscribed ? ' subscribed' : ''}${!r.exists ? ' missing' : ''}`;
+    card.innerHTML = `
+      <div class="root-header">
+        <span class="root-label">${r.label}${!r.exists ? '<span class="not-exist-badge">⏳ 未安装</span>' : ''}</span>
+        <button class="sub-btn${r.subscribed ? ' active' : ''}" onclick="event.stopPropagation();toggleSub('${r.path}',${!r.subscribed})">
+          ${r.subscribed ? '✓ 已订阅' : '+ 订阅'}
+        </button>
       </div>
-      <div class="dir-card-body">
-        <div class="skill-name">${esc(basename(d.path))}</div>
-        <div class="path">${esc(d.path)}</div>
-      </div>
-    </div>`;
-  }).join('');
+      <div class="root-path">${r.path}</div>
+      <div class="root-count">${r.skill_count} skills</div>
+      <div class="sample-skills">${r.sample_skills.map(s => `<span class="sample-tag">${s}</span>`).join('')}</div>
+    `;
+    grid.appendChild(card);
+  });
 }
 
-async function toggleSub(path,checked){
-  if(checked){
-    await fetch(API+'/api/subscriptions?path='+encodeURIComponent(path),{method:'POST'});
-  }else{
-    await fetch(API+'/api/subscriptions?path='+encodeURIComponent(path),{method:'DELETE'});
+async function toggleSub(path, subscribe) {
+  if (subscribe) {
+    await fetch(`${API}/api/subscriptions?path=${encodeURIComponent(path)}`, {method: 'POST'});
+  } else {
+    await fetch(`${API}/api/subscriptions?path=${encodeURIComponent(path)}`, {method: 'DELETE'});
   }
-  renderDiscover();
-}
-
-async function subscribeAllVisible(){
-  const paths=discoveredDirs.map(d=>d.path);
-  await fetch(API+'/api/subscriptions/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(paths)});
-  renderDiscover();
+  loadDiscover();
 }
 
 // ---- Skills ----
-async function loadSkills(){
-  const el=document.getElementById('skillContainer');
-  try{
-    const url=searchQ?API+'/api/skills?search='+encodeURIComponent(searchQ):API+'/api/skills';
-    const r=await fetch(url);
-    const groups=await r.json();
-    renderSkills(groups);
-  }catch(e){
-    el.innerHTML='<div class="empty"><div class="icon">🔌</div><p>无法加载</p></div>';
+async function loadSkills() {
+  // Load root filter
+  const subs = await fetch(`${API}/api/subscriptions`).then(r => r.json());
+  const select = document.getElementById('root-filter');
+  const prev = select.value;
+  select.innerHTML = '<option value="">全部根目录</option>';
+  subs.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.path; opt.textContent = `${s.label} (${s.skills.length})`;
+    select.appendChild(opt);
+  });
+  if (prev) select.value = prev;
+
+  let url = `${API}/api/skills?`;
+  const search = document.getElementById('search-input').value;
+  const root = document.getElementById('root-filter').value;
+  if (search) url += `search=${encodeURIComponent(search)}&`;
+  if (root) url += `root=${encodeURIComponent(root)}&`;
+
+  allSkills = [];
+  const groups = await fetch(url).then(r => r.json());
+  groups.forEach(g => {
+    g.instances.forEach(inst => allSkills.push(inst));
+  });
+
+  selectedPaths.clear();
+  updateActions();
+  const list = document.getElementById('skills-list');
+  list.innerHTML = '';
+
+  if (groups.length === 0) {
+    list.innerHTML = '<div class="empty">暂无订阅的 Skill，去「发现」页面订阅根目录吧</div>';
+    return;
   }
-}
 
-function renderSkills(groups){
-  const el=document.getElementById('skillContainer');
-  const total=groups.reduce((s,g)=>s+g.instances.length,0);
-  const dups=groups.filter(g=>g.instances.length>1).length;
-  document.getElementById('statsBar').innerHTML=`
-    <span>共 <span class="num">${groups.length}</span> 个技能</span>
-    <span>重复 <span class="num">${dups}</span> 组</span>
-    <span>实例 <span class="num">${total}</span></span>`;
-  if(!groups.length){el.innerHTML='<div class="empty"><div class="icon">📭</div><p>没有找到技能</p></div>';return;}
-  el.innerHTML=groups.map(g=>{
-    const isDup=g.instances.length>1;
-    const isOpen=expandedGroups.has(g.name)||isDup;
-    return `<div class="skill-group">
-      <div class="group-header" onclick="toggleGrp('${escA(g.name)}')">
-        <span class="group-chevron ${isOpen?'open':''}">▶</span>
-        <span class="group-name">${esc(g.name)}</span>
-        ${isDup?`<span class="group-badge">${g.instances.length}x</span>`:''}
-        <span class="group-meta">${g.instances.length===1?g.instances[0].root_dir:g.instances.map(i=>i.root_dir).join(', ')}</span>
-      </div>
-      <div class="group-body" style="display:${isOpen?'block':'none'}">
-        ${g.instances.map(sk=>`
-          <div class="skill-card">
-            <input type="checkbox" class="skill-checkbox" ${selected.has(sk.skill_md_path)?'checked':''} onchange="toggleSel('${escA(sk.skill_md_path)}',this.checked,${escJ(JSON.stringify(sk))})">
-            <div class="skill-info">
-              <div class="row"><span class="name">${esc(sk.name)}</span><span class="agent-tag">${esc(sk.root_dir)}</span></div>
-              ${sk.description?`<div class="desc">${esc(sk.description)}</div>`:''}
-              ${sk.tags?.length?`<div class="tags">${sk.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')}</div>`:''}
-            </div>
-            <div class="skill-actions">
-              <button class="action-btn" onclick="viewSkill('${escA(sk.skill_md_path)}')">📖</button>
-              <button class="action-btn delete" onclick="askDelete('${escA(sk.skill_dir)}','${esc(sk.name)}')">🗑️</button>
-            </div>
-          </div>`).join('')}
-      </div>
-    </div>`}).join('');
-}
-
-function toggleGrp(n){expandedGroups.has(n)?expandedGroups.delete(n):expandedGroups.add(n);loadSkills();}
-
-// Selection
-function toggleSel(path,checked,json){
-  if(checked)selected.set(path,json);else selected.delete(path);
-  const n=selected.size;
-  document.getElementById('compareBtn').style.display=n>=2?'':'none';
-  document.getElementById('cmpN').textContent=n;
-  document.getElementById('deleteBtn').style.display=n>=1?'':'none';
-  document.getElementById('delN').textContent=n;
-}
-
-// Compare
-async function openCompare(){
-  const entries=[...selected.entries()].slice(0,2);
-  if(entries.length<2)return;
-  const[pA,sA]=entries[0],[pB,sB]=entries[1];
-  document.getElementById('compareOverlay').style.display='flex';
-  document.getElementById('compareTitle').textContent=`⚖️ ${sA.name}: ${sA.root_dir} ↔ ${sB.root_dir}`;
-  document.getElementById('compareBody').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  try{
-    const r=await fetch(API+'/api/diff?path_a='+encodeURIComponent(pA)+'&path_b='+encodeURIComponent(pB));
-    const d=await r.json();
-    document.getElementById('compareStats').innerHTML=`
-      <div class="stat added"><span class="num">+${d.added}</span> 新增</div>
-      <div class="stat removed"><span class="num">-${d.removed}</span> 删除</div>
-      <div class="stat">A: ${d.a_lines}行 · B: ${d.b_lines}行</div>`;
-    const lines=d.unified_diff.split('\n');
-    let h='<table class="diff-table">';
-    for(const l of lines){
-      if(l.startsWith('@@'))h+=`<tr class="dh"><td class="ln"></td><td>${esc(l)}</td></tr>`;
-      else if(l.startsWith('+'))h+=`<tr class="da"><td class="ln"></td><td>${esc(l.slice(1))}</td></tr>`;
-      else if(l.startsWith('-'))h+=`<tr class="dd"><td class="ln"></td><td>${esc(l.slice(1))}</td></tr>`;
-      else h+=`<tr><td class="ln"></td><td>${esc(l.startsWith(' ')?l.slice(1):l)}</td></tr>`;
+  groups.forEach(g => {
+    if (g.instances.length > 1) {
+      // Group header for duplicates
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'font-size:12px;color:#d29922;padding:4px 0;margin-top:8px;';
+      hdr.textContent = `⚠️ ${g.name} (出现在 ${g.instances.length} 个位置)`;
+      list.appendChild(hdr);
     }
-    h+='</table>';
-    document.getElementById('compareBody').innerHTML=h||'<div class="empty"><p>内容完全相同</p></div>';
-  }catch(e){document.getElementById('compareBody').innerHTML='<div class="empty"><p>'+esc(e.message)+'</p></div>';}
-}
-function closeCompare(){document.getElementById('compareOverlay').style.display='none';}
+    g.instances.forEach(inst => {
+      const row = document.createElement('div');
+      row.className = 'skill-row';
+      row.dataset.path = inst.skill_dir;
+      row.innerHTML = `
+        <span class="skill-name">${inst.name}${g.instances.length > 1 ? '<span class="dup-badge">重复</span>' : ''}</span>
+        <span class="skill-desc">${inst.description || '—'}</span>
+        <span class="skill-meta">${inst.root_dir} · ${inst.file_count} 文件</span>
+      `;
+      row.addEventListener('click', () => {
+        row.classList.toggle('selected');
+        if (selectedPaths.has(inst.skill_dir)) selectedPaths.delete(inst.skill_dir);
+        else selectedPaths.add(inst.skill_dir);
+        updateActions();
+      });
+      row.addEventListener('dblclick', () => viewContent(inst.skill_dir));
+      list.appendChild(row);
+    });
+  });
 
-// View
-async function viewSkill(path){
-  document.getElementById('viewerOverlay').style.display='flex';
-  document.getElementById('viewerTitle').textContent='📖 '+path.split('/').slice(-2).join('/');
-  try{
-    const r=await fetch(API+'/api/skill-content?path='+encodeURIComponent(path));
-    const d=await r.json();
-    document.getElementById('viewerContent').textContent=d.content;
-  }catch(e){document.getElementById('viewerContent').textContent='加载失败';}
-}
-function closeViewer(){document.getElementById('viewerOverlay').style.display='none';}
-
-// Delete
-function askDelete(path,name){
-  document.getElementById('confirmMsg').textContent=`确定要删除技能「${name}」吗？此操作不可撤销。`;
-  document.getElementById('confirmPath').textContent=path;
-  confirmCb=async()=>{
-    await fetch(API+'/api/skills/delete?path='+encodeURIComponent(path),{method:'DELETE'});
-    selected.clear();updateBtns();
-    loadSkills();discoverAll();
-  };
-  document.getElementById('confirmOverlay').style.display='flex';
-}
-function deleteSelected(){
-  const n=selected.size;
-  const paths=[...selected.keys()];
-  document.getElementById('confirmMsg').textContent=`确定要删除选中的 ${n} 个技能吗？`;
-  document.getElementById('confirmPath').textContent=paths.join('\n');
-  confirmCb=async()=>{
-    for(const p of paths)await fetch(API+'/api/skills/delete?path='+encodeURIComponent(p),{method:'DELETE'});
-    selected.clear();updateBtns();
-    loadSkills();discoverAll();
-  };
-  document.getElementById('confirmOverlay').style.display='flex';
-}
-function doConfirm(){closeConfirm();if(confirmCb)confirmCb();confirmCb=null;}
-function closeConfirm(){document.getElementById('confirmOverlay').style.display='none';}
-function updateBtns(){
-  const n=selected.size;
-  document.getElementById('compareBtn').style.display=n>=2?'':'none';
-  document.getElementById('cmpN').textContent=n;
-  document.getElementById('deleteBtn').style.display=n>=1?'':'none';
-  document.getElementById('delN').textContent=n;
+  document.getElementById('stats').textContent = `${allSkills.length} skills · ${groups.length} 个名称`;
 }
 
-// ---- Scan roots ----
-async function loadScanRoots(){
-  try{
-    const r=await fetch(API+'/api/discover');
-    const all=await r.json();
-    // get user-added roots from config
-    const r2=await fetch(API+'/api/subscriptions');
-    const subs=await r2.json();
-    // Show user-added roots
-    // We need a separate endpoint... use the subscriptions endpoint to infer
-    // Actually let's just show what's in the discover labels that are not default
-    document.getElementById('scanRootList').innerHTML='<p style="font-size:12px;color:var(--text2)">自定义扫描路径暂未添加</p>';
-  }catch(e){console.error(e);}
+function updateActions() {
+  const n = selectedPaths.size;
+  document.getElementById('btn-compare').disabled = n !== 2;
+  document.getElementById('btn-view').disabled = n !== 1;
+  document.getElementById('btn-delete').disabled = n < 1;
 }
 
-function renderPresets(){
-  // The default roots are hardcoded in backend; show them as reference
-  const el=document.getElementById('presetList');
-  // Show common agent directories as clickable chips
-  const presets=[
-    {label:'Hermes',path:'~/.hermes/skills'},
-    {label:'GitHub Copilot',path:'~/.copilot/skills'},
-    {label:'Claude Code',path:'~/.claude/skills'},
-    {label:'Cursor',path:'~/.cursor/skills'},
-    {label:'OpenCode',path:'~/.config/opencode/skills'},
-    {label:'Codex',path:'~/.codex/skills'},
-    {label:'Cline',path:'~/.agents/skills'},
-    {label:'Gemini CLI',path:'~/.gemini/skills'},
-    {label:'Windsurf',path:'~/.codeium/windsurf/skills'},
-    {label:'OpenClaw',path:'~/.openclaw/skills'},
-    {label:'Trae',path:'~/.trae/skills'},
-    {label:'CodeBuddy',path:'~/.codebuddy/skills'},
-    {label:'Droid',path:'~/.factory/skills'},
-    {label:'Amp',path:'~/.config/agents/skills'},
-    {label:'Kilo Code',path:'~/.kilocode/skills'},
-    {label:'Mux',path:'~/.mux/skills'},
-    {label:'Qoder',path:'~/.qoder/skills'},
-    {label:'Qwen Code',path:'~/.qwen/skills'},
-    {label:'Zencoder',path:'~/.zencoder/skills'},
-    {label:'Pi',path:'~/.pi/agent/skills'},
-  ];
-  el.innerHTML=presets.map(p=>`<span class="preset-chip" onclick="addScanRoot('${p.path}')" title="${p.path}">${p.label}</span>`).join('');
+document.getElementById('btn-compare').addEventListener('click', async () => {
+  const [a, b] = [...selectedPaths];
+  const data = await fetch(`${API}/api/diff?path_a=${encodeURIComponent(a)}&path_b=${encodeURIComponent(b)}`).then(r => r.json());
+  document.getElementById('diff-title').textContent = `${data.skill_a.name} vs ${data.skill_b.name}`;
+  document.getElementById('diff-stats').innerHTML = `
+    <span>A: ${data.a_lines} 行</span>
+    <span>B: ${data.b_lines} 行</span>
+    <span class="added">+${data.added}</span>
+    <span class="removed">-${data.removed}</span>
+    <span>${data.skill_a.root_dir} ↔ ${data.skill_b.root_dir}</span>
+  `;
+  const el = document.getElementById('diff-content');
+  if (!data.unified_diff.trim()) {
+    el.innerHTML = '<span style="color:var(--green)">✅ 文件内容完全一致！</span>';
+  } else {
+    el.innerHTML = data.unified_diff.split('\n').map(line => {
+      if (line.startsWith('+++') || line.startsWith('---')) return `<span class="line-hdr">${esc(line)}</span>`;
+      if (line.startsWith('+')) return `<span class="line-add">${esc(line)}</span>`;
+      if (line.startsWith('-')) return `<span class="line-del">${esc(line)}</span>`;
+      return esc(line);
+    }).join('\n');
+  }
+  document.getElementById('diff-modal').classList.add('active');
+});
+
+document.getElementById('btn-view').addEventListener('click', () => {
+  const path = [...selectedPaths][0];
+  viewContent(path);
+});
+
+async function viewContent(path) {
+  const data = await fetch(`${API}/api/skill-content?path=${encodeURIComponent(path)}`).then(r => r.json());
+  document.getElementById('content-title').textContent = data.path;
+  document.getElementById('content-body').textContent = data.content;
+  document.getElementById('content-modal').classList.add('active');
 }
 
-async function addScanRoot(path){
-  const val=path||document.getElementById('newRootPath').value.trim();
-  if(!val)return;
-  await fetch(API+'/api/scan-roots?path='+encodeURIComponent(val),{method:'POST'});
-  document.getElementById('newRootPath').value='';
-  discoverAll();
+document.getElementById('btn-delete').addEventListener('click', async () => {
+  const paths = [...selectedPaths];
+  if (!confirm(`确定删除 ${paths.length} 个 skill？\n${paths.map(p => p.split('/').pop()).join(', ')}`)) return;
+  for (const p of paths) {
+    await fetch(`${API}/api/skills/delete?path=${encodeURIComponent(p)}`, {method: 'DELETE'});
+  }
+  selectedPaths.clear();
+  loadSkills();
+});
+
+// Search debounce
+let searchTimer;
+document.getElementById('search-input').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadSkills, 300);
+});
+document.getElementById('root-filter').addEventListener('change', loadSkills);
+
+// ---- Settings ----
+async function loadExtraRoots() {
+  const roots = await fetch(`${API}/api/extra-roots`).then(r => r.json());
+  const list = document.getElementById('extra-roots-list');
+  list.innerHTML = '';
+  roots.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'extra-root-item';
+    item.innerHTML = `
+      <span><strong>${r.label}</strong> — ${r.path}</span>
+      <button class="del-btn" onclick="delExtraRoot('${r.path}')">&times;</button>
+    `;
+    list.appendChild(item);
+  });
 }
 
-// ---- Search ----
-function onSearch(q){
-  searchQ=q.toLowerCase();
-  if(currentTab==='discover')renderDiscover();
-  else if(currentTab==='skills')loadSkills();
+async function addExtraRoot() {
+  const label = document.getElementById('extra-label').value.trim();
+  const path = document.getElementById('extra-path').value.trim();
+  if (!label || !path) return;
+  await fetch(`${API}/api/extra-roots?label=${encodeURIComponent(label)}&path=${encodeURIComponent(path)}`, {method: 'POST'});
+  document.getElementById('extra-label').value = '';
+  document.getElementById('extra-path').value = '';
+  loadExtraRoots();
 }
 
-// ---- Utils ----
-function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
-function escA(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
-function escJ(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
-function basename(p){return p.split('/').pop()||p.split('\\').pop();}
+async function delExtraRoot(path) {
+  await fetch(`${API}/api/extra-roots?path=${encodeURIComponent(path)}`, {method: 'DELETE'});
+  loadExtraRoots();
+}
+
+// Utils
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); }));
 
 // Init
-discoverAll();
+loadDiscover();
 </script>
 </body>
 </html>
